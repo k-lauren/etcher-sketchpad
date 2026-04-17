@@ -3,6 +3,17 @@
 A canvas-based AI interaction UI inspired by sticky notes on a pin-up board.
 Context for inference is built by bolting together draggable sticky notes (Q&A pairs) into chains.
 
+<table>
+  <tr>
+    <td width="50%"><img src="docs/Screenshot%20Light.png" alt="Etcher-Sketchpad in light mode" /></td>
+    <td width="50%"><img src="docs/Screenshot%20Dark.png" alt="Etcher-Sketchpad in dark mode" /></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><i>Light mode — a chained conversation laid out on the canvas.</i></sub></td>
+    <td align="center"><sub><i>Dark mode — same workspace with the indigo-and-amber palette.</i></sub></td>
+  </tr>
+</table>
+
 ## Features
 
 - **Canvas tab** — a dotted infinite feel canvas with draggable sticky notes. Each note
