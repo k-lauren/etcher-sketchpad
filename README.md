@@ -1,6 +1,6 @@
 # Etcher-Sketchpad
 
-A canvas-based AI interaction UI inspired by the design in `Etcher-Sketchpad-UI.pptx`.
+A canvas-based AI interaction UI inspired by sticky notes on a pin-up board.
 Context for inference is built by bolting together draggable sticky notes (Q&A pairs) into chains.
 
 ## Features
