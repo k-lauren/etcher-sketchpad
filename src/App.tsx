@@ -363,7 +363,19 @@ export default function App() {
                 setDocPreview((p) => (p ? { ...p, open: true } : p))
               }
             >
-              ⌃
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <polyline points="6 15 12 9 18 15" />
+              </svg>
             </button>
           )}
           {sidebarId && (

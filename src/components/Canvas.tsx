@@ -1,4 +1,5 @@
 import { useRef, useState, useCallback, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import type { StickyNote } from '../types';
 import { StickyNoteCard } from './StickyNoteCard';
 import { getHiddenIds } from '../layout';
