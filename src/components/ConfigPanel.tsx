@@ -122,6 +122,21 @@ export function ConfigPanel({ config, onSave }: Props) {
           </div>
         </div>
 
+        <div className="field">
+          <label>Dev Mode</label>
+          <div className="provider-row">
+            <button
+              className={'provider-chip' + (draft.devMode ? ' active' : '')}
+              onClick={() => update({ devMode: !draft.devMode })}
+            >
+              {draft.devMode ? 'On' : 'Off'}
+            </button>
+            <span style={{ fontSize: 12, color: '#888', alignSelf: 'center' }}>
+              Shows tool calls and their results on sticky notes and in the sidebar.
+            </span>
+          </div>
+        </div>
+
         <div className="save-row">
           {savedAt && <span style={{ fontSize: 12, color: '#2a9d5c', alignSelf: 'center' }}>Saved</span>}
           <button className="btn-primary" onClick={save}>Save</button>

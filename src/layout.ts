@@ -1,11 +1,15 @@
 import type { LayoutDirection, StickyNote } from './types';
 
-const STICKY_W = 220;
-const STICKY_H = 180;
+const DEFAULT_W = 220;
+const DEFAULT_H = 180;
 const SIBLING_GAP = 20;
 const LEVEL_GAP = 40;
-const TREE_GAP = 1; // extra perpendicular units between separate trees
+const TREE_GAP = 40;
 const MARGIN = 60;
+
+export interface SizeMap {
+  get(id: string): { w: number; h: number } | undefined;
+}
 
 /** Return the set of ids whose visibility is suppressed because some ancestor has `collapsed: true`. */
 export function getHiddenIds(notes: StickyNote[]): Set<string> {
@@ -34,12 +38,17 @@ export function getHiddenIds(notes: StickyNote[]): Set<string> {
 
 /**
  * Lay out all notes as trees, one per root.
+ * Spacing uses actual rendered bounding boxes (from `sizes`) so a ballooned
+ * sticky pushes its children/siblings clear of its boundary rather than
+ * spacing by center distance.
+ *
  * - vertical: roots at top; children below; siblings spread horizontally.
  * - horizontal: roots at left; children to the right; siblings spread vertically.
  */
 export function autoLayout(
   notes: StickyNote[],
-  direction: LayoutDirection = 'vertical'
+  direction: LayoutDirection = 'vertical',
+  sizes?: SizeMap
 ): StickyNote[] {
   const byParent = new Map<string, StickyNote[]>();
   const roots: StickyNote[] = [];
@@ -54,44 +63,56 @@ export function autoLayout(
   }
 
   const isVertical = direction === 'vertical';
-  // stepPerp: between siblings (perpendicular to growth axis)
-  // stepDepth: between parent and child levels (along growth axis)
-  const stepPerp = (isVertical ? STICKY_W : STICKY_H) + SIBLING_GAP;
-  const stepDepth = (isVertical ? STICKY_H : STICKY_W) + LEVEL_GAP;
+  const sizeOf = (id: string): { w: number; h: number } => {
+    const s = sizes?.get(id);
+    if (!s) return { w: DEFAULT_W, h: DEFAULT_H };
+    return { w: s.w || DEFAULT_W, h: s.h || DEFAULT_H };
+  };
 
   const positions = new Map<string, { x: number; y: number }>();
   let nextPerp = 0;
 
   const layoutSubtree = (
     id: string,
-    depth: number
-  ): { start: number; end: number } => {
+    alongOrigin: number
+  ): { perpStart: number; perpEnd: number } => {
+    const size = sizeOf(id);
+    const selfPerp = isVertical ? size.w : size.h;
+    const selfAlong = isVertical ? size.h : size.w;
     const kids = byParent.get(id) ?? [];
+
     if (kids.length === 0) {
-      const p = nextPerp++;
+      const perpStart = nextPerp;
       positions.set(
         id,
         isVertical
-          ? { x: p * stepPerp, y: depth * stepDepth }
-          : { x: depth * stepDepth, y: p * stepPerp }
+          ? { x: perpStart, y: alongOrigin }
+          : { x: alongOrigin, y: perpStart }
       );
-      return { start: p, end: p };
+      nextPerp = perpStart + selfPerp + SIBLING_GAP;
+      return { perpStart, perpEnd: perpStart + selfPerp };
     }
-    let start = Infinity;
-    let end = -Infinity;
+
+    const childAlongOrigin = alongOrigin + selfAlong + LEVEL_GAP;
+    let childMin = Infinity;
+    let childMax = -Infinity;
     for (const k of kids) {
-      const r = layoutSubtree(k.id, depth + 1);
-      if (r.start < start) start = r.start;
-      if (r.end > end) end = r.end;
+      const r = layoutSubtree(k.id, childAlongOrigin);
+      if (r.perpStart < childMin) childMin = r.perpStart;
+      if (r.perpEnd > childMax) childMax = r.perpEnd;
     }
-    const mid = (start + end) / 2;
+    const childMid = (childMin + childMax) / 2;
+    const perpStart = childMid - selfPerp / 2;
     positions.set(
       id,
       isVertical
-        ? { x: mid * stepPerp, y: depth * stepDepth }
-        : { x: depth * stepDepth, y: mid * stepPerp }
+        ? { x: perpStart, y: alongOrigin }
+        : { x: alongOrigin, y: perpStart }
     );
-    return { start, end };
+    return {
+      perpStart: Math.min(perpStart, childMin),
+      perpEnd: Math.max(perpStart + selfPerp, childMax),
+    };
   };
 
   for (const r of roots) {

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import type { StickyNote } from '../types';
+import { Markdown } from './Markdown';
 
 interface Props {
   note: StickyNote;
@@ -15,6 +16,7 @@ interface Props {
   onDetach: (id: string) => void;
   onAsk: (id: string, question: string) => void;
   onToggleCollapse: (id: string) => void;
+  devMode: boolean;
 }
 
 export function StickyNoteCard({
@@ -31,6 +33,7 @@ export function StickyNoteCard({
   onDetach,
   onAsk,
   onToggleCollapse,
+  devMode,
 }: Props) {
   const [draft, setDraft] = useState('');
   const [editing, setEditing] = useState(!note.question);
@@ -41,6 +44,7 @@ export function StickyNoteCard({
   }, [editing]);
 
   const isChild = note.parentId !== null;
+  const isDoc = note.kind === 'document';
 
   const send = () => {
     const q = draft.trim();
@@ -50,8 +54,85 @@ export function StickyNoteCard({
     onAsk(note.id, q);
   };
 
+  if (isDoc) {
+    return (
+      <div
+        data-note-id={note.id}
+        className={
+          'sticky doc' +
+          (selected ? ' selected' : '') +
+          (dropTarget ? ' drop-target' : '')
+        }
+        style={{ left: note.x, top: note.y }}
+        onPointerDown={() => onSelect(note.id)}
+        onDoubleClick={(e) => {
+          e.stopPropagation();
+          onOpenChain(note.id);
+        }}
+      >
+        <div
+          className="sticky-header"
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            onSelect(note.id);
+            onPointerDown(e, note.id);
+          }}
+        >
+          <span className="sticky-chain-badge">📄 document</span>
+          <div className="sticky-actions" onPointerDown={(e) => e.stopPropagation()}>
+            <button
+              className="icon-btn"
+              title="Open document"
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenChain(note.id);
+              }}
+            >
+              🔍
+            </button>
+            <button
+              className="icon-btn"
+              title="Duplicate"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDuplicate(note.id);
+              }}
+            >
+              ⎘
+            </button>
+            {isChild && (
+              <button
+                className="icon-btn"
+                title="Detach from parent"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDetach(note.id);
+                }}
+              >
+                ✂
+              </button>
+            )}
+            <button
+              className="icon-btn"
+              title="Delete"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(note.id);
+              }}
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+        <div className="doc-title">{note.document?.title ?? 'Untitled document'}</div>
+        <div className="doc-hint">Double-click to open</div>
+      </div>
+    );
+  }
+
   return (
     <div
+      data-note-id={note.id}
       className={
         'sticky' +
         (isChild ? ' child' : '') +
@@ -165,7 +246,39 @@ export function StickyNoteCard({
           className={'sticky-a' + (note.answer ? '' : ' empty')}
           onClick={(e) => e.stopPropagation()}
         >
-          {note.loading ? 'Thinking…' : note.answer || 'No answer yet'}
+          {note.loading ? (
+            'Thinking…'
+          ) : note.answer ? (
+            <Markdown>{note.answer}</Markdown>
+          ) : (
+            'No answer yet'
+          )}
+        </div>
+      )}
+
+      {devMode && note.toolCalls && note.toolCalls.length > 0 && (
+        <div className="dev-toolcalls" onClick={(e) => e.stopPropagation()}>
+          <div className="dev-toolcalls-title">
+            Tool calls ({note.toolCalls.length})
+          </div>
+          {note.toolCalls.map((tc, i) => (
+            <details key={i} className="dev-toolcall">
+              <summary>
+                <span className="dev-toolcall-name">{tc.name}</span>
+                <span className="dev-toolcall-iter">#{tc.iteration}</span>
+              </summary>
+              <div className="dev-toolcall-section">
+                <div className="dev-toolcall-label">args</div>
+                <pre className="dev-toolcall-body">
+                  {JSON.stringify(tc.args, null, 2)}
+                </pre>
+              </div>
+              <div className="dev-toolcall-section">
+                <div className="dev-toolcall-label">result</div>
+                <pre className="dev-toolcall-body">{tc.result}</pre>
+              </div>
+            </details>
+          ))}
         </div>
       )}
 

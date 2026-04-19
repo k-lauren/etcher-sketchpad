@@ -15,9 +15,10 @@ interface Props {
   onDetach: (id: string) => void;
   onAsk: (id: string, question: string) => void;
   onOpenChain: (id: string) => void;
-  onAddRoot: () => void;
   onToggleCollapse: (id: string) => void;
-  onAutoLayout: () => void;
+  onAutoLayout: (sizes: Map<string, { w: number; h: number }>) => void;
+  devMode: boolean;
+  measureRef?: React.MutableRefObject<(() => Map<string, { w: number; h: number }>) | null>;
 }
 
 const STICKY_W = 220;
@@ -43,9 +44,10 @@ export function Canvas({
   onDetach,
   onAsk,
   onOpenChain,
-  onAddRoot,
   onToggleCollapse,
   onAutoLayout,
+  devMode,
+  measureRef,
 }: Props) {
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const [transform, setTransform] = useState<Transform>({ x: 0, y: 0, scale: 1 });
@@ -236,6 +238,30 @@ export function Canvas({
 
   const resetView = () => setTransform({ x: 0, y: 0, scale: 1 });
 
+  const measureSizes = useCallback((): Map<string, { w: number; h: number }> => {
+    const out = new Map<string, { w: number; h: number }>();
+    const el = wrapRef.current;
+    if (!el) return out;
+    const scale = transformRef.current.scale || 1;
+    el
+      .querySelectorAll<HTMLElement>('[data-note-id]')
+      .forEach((node) => {
+        const id = node.dataset.noteId;
+        if (!id) return;
+        const rect = node.getBoundingClientRect();
+        out.set(id, { w: rect.width / scale, h: rect.height / scale });
+      });
+    return out;
+  }, []);
+
+  useEffect(() => {
+    if (!measureRef) return;
+    measureRef.current = measureSizes;
+    return () => {
+      if (measureRef) measureRef.current = null;
+    };
+  }, [measureRef, measureSizes]);
+
   return (
     <div
       className={'canvas-wrap' + (panning ? ' panning' : '')}
@@ -317,31 +343,9 @@ export function Canvas({
             onDetach={onDetach}
             onAsk={onAsk}
             onToggleCollapse={onToggleCollapse}
+            devMode={devMode}
           />
         ))}
-      </div>
-
-      <div className="canvas-toolbar" onPointerDown={(e) => e.stopPropagation()}>
-        <button
-          className="toolbar-btn tidy"
-          title="Auto-arrange into tidy trees"
-          onClick={(e) => {
-            e.stopPropagation();
-            onAutoLayout();
-          }}
-        >
-          ⊞
-        </button>
-        <button
-          className="toolbar-btn"
-          title="Add new chain"
-          onClick={(e) => {
-            e.stopPropagation();
-            onAddRoot();
-          }}
-        >
-          +
-        </button>
       </div>
 
       <div className="zoom-controls" onPointerDown={(e) => e.stopPropagation()}>

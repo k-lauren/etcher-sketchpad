@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
-import type { AppConfig, ChatMessage, StickyNote } from './types';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import type { AppConfig, ChatMessage, DocumentPayload, StickyNote } from './types';
 import { defaultConfig, loadConfig, loadNotes, saveConfig, saveNotes, uid } from './storage';
 import { infer } from './api';
 import { Canvas } from './components/Canvas';
 import { Sidebar } from './components/Sidebar';
 import { ConfigPanel } from './components/ConfigPanel';
+import { DocViewer } from './components/DocViewer';
 import { autoLayout } from './layout';
 
 type Tab = 'canvas' | 'config';
@@ -22,12 +23,34 @@ export default function App() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [sidebarId, setSidebarId] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [docPreview, setDocPreview] = useState<{ noteId: string; open: boolean } | null>(null);
+  const measureRef = useRef<(() => Map<string, { w: number; h: number }>) | null>(null);
 
   useEffect(() => { saveNotes(notes); }, [notes]);
   useEffect(() => { saveConfig(config); }, [config]);
   useEffect(() => {
     document.body.classList.toggle('theme-dark', config.theme === 'dark');
   }, [config.theme]);
+
+  const buildDocNotes = (
+    all: StickyNote[],
+    parentId: string,
+    docs: DocumentPayload[]
+  ): StickyNote[] => {
+    const parent = all.find((n) => n.id === parentId);
+    const baseX = (parent?.x ?? 200) + 260;
+    const baseY = (parent?.y ?? 200) + 20;
+    return docs.map((doc, i) => ({
+      id: uid(),
+      x: baseX,
+      y: baseY + i * 50,
+      question: '',
+      answer: '',
+      parentId,
+      kind: 'document' as const,
+      document: doc,
+    }));
+  };
 
   const chainFor = (id: string): StickyNote[] => {
     const chain: StickyNote[] = [];
@@ -69,9 +92,10 @@ export default function App() {
     }
 
     const messages: ChatMessage[] = [];
-    for (let i = 0; i < chain.length; i++) {
-      const n = chain[i];
-      if (i === chain.length - 1) {
+    const qaChain = chain.filter((n) => n.kind !== 'document');
+    for (let i = 0; i < qaChain.length; i++) {
+      const n = qaChain[i];
+      if (i === qaChain.length - 1) {
         messages.push({ role: 'user', content: n.question });
       } else {
         if (n.question) messages.push({ role: 'user', content: n.question });
@@ -81,12 +105,14 @@ export default function App() {
 
     try {
       setSending(true);
-      const answer = await infer({ config, messages });
-      setNotes((prev) =>
-        prev.map((n) =>
-          n.id === noteId ? { ...n, answer, loading: false } : n
-        )
-      );
+      const { answer, toolCalls, documents } = await infer({ config, messages });
+      setNotes((prev) => {
+        const updated = prev.map((n) =>
+          n.id === noteId ? { ...n, answer, toolCalls, loading: false } : n
+        );
+        if (!documents.length) return updated;
+        return [...updated, ...buildDocNotes(updated, noteId, documents)];
+      });
     } catch (err: any) {
       setNotes((prev) =>
         prev.map((n) =>
@@ -161,6 +187,7 @@ export default function App() {
     setNotes((prev) => prev.filter((n) => n.id !== id).map((n) => (n.parentId === id ? { ...n, parentId: null } : n)));
     if (selectedId === id) setSelectedId(null);
     if (sidebarId === id) setSidebarId(null);
+    if (docPreview?.noteId === id) setDocPreview(null);
   };
 
   const duplicateNote = (id: string) => {
@@ -194,6 +221,7 @@ export default function App() {
 
     const messages: ChatMessage[] = [];
     for (const n of chain) {
+      if (n.kind === 'document') continue;
       if (n.question) messages.push({ role: 'user', content: n.question });
       if (n.answer) messages.push({ role: 'assistant', content: n.answer });
     }
@@ -215,10 +243,14 @@ export default function App() {
 
     try {
       setSending(true);
-      const answer = await infer({ config, messages });
-      setNotes((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, answer, loading: false } : n))
-      );
+      const { answer, toolCalls, documents } = await infer({ config, messages });
+      setNotes((prev) => {
+        const updated = prev.map((n) =>
+          n.id === id ? { ...n, answer, toolCalls, loading: false } : n
+        );
+        if (!documents.length) return updated;
+        return [...updated, ...buildDocNotes(updated, id, documents)];
+      });
     } catch (err: any) {
       setNotes((prev) =>
         prev.map((n) =>
@@ -233,6 +265,12 @@ export default function App() {
   const openChain = (id: string) => {
     setSidebarId(id);
     setSelectedId(id);
+    const n = notes.find((x) => x.id === id);
+    if (n?.kind === 'document') {
+      setDocPreview({ noteId: id, open: false });
+    } else if (docPreview) {
+      setDocPreview(null);
+    }
   };
 
   const toggleCollapse = (id: string) =>
@@ -240,8 +278,16 @@ export default function App() {
       prev.map((n) => (n.id === id ? { ...n, collapsed: !n.collapsed } : n))
     );
 
-  const runAutoLayout = () =>
-    setNotes((prev) => autoLayout(prev, config.layoutDirection));
+  const runAutoLayout = (sizes: Map<string, { w: number; h: number }>) =>
+    setNotes((prev) => autoLayout(prev, config.layoutDirection, sizes));
+
+  const handleHeaderAutoLayout = () => {
+    const sizes = measureRef.current?.() ?? new Map<string, { w: number; h: number }>();
+    runAutoLayout(sizes);
+  };
+
+  const handleHeaderAddNote = () =>
+    addNote(160 + Math.random() * 200, 160 + Math.random() * 200);
 
   return (
     <div className="app">
@@ -271,7 +317,7 @@ export default function App() {
       </div>
 
       {tab === 'canvas' ? (
-        <div className="canvas-page">
+        <div className={'canvas-page' + (sidebarId ? ' sidebar-open' : '')}>
           <Canvas
             notes={notes}
             selectedId={selectedId}
@@ -284,19 +330,67 @@ export default function App() {
             onDuplicate={duplicateNote}
             onAsk={runInference}
             onOpenChain={openChain}
-            onAddRoot={() => addNote(160 + Math.random() * 200, 160 + Math.random() * 200)}
             onToggleCollapse={toggleCollapse}
             onAutoLayout={runAutoLayout}
+            devMode={config.devMode}
+            measureRef={measureRef}
           />
+          {!docPreview?.open && (
+            <div className="canvas-toolbar" onPointerDown={(e) => e.stopPropagation()}>
+              <button
+                className="toolbar-btn tidy"
+                title="Auto-arrange into tidy trees"
+                onClick={handleHeaderAutoLayout}
+              >
+                ⊞
+              </button>
+              <button
+                className="toolbar-btn"
+                title="Add new chain"
+                onClick={handleHeaderAddNote}
+              >
+                +
+              </button>
+            </div>
+          )}
+          {docPreview !== null && !docPreview.open && (
+            <button
+              className="doc-expand-chevron"
+              title="Expand attached document"
+              aria-label="Expand attached document"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={() =>
+                setDocPreview((p) => (p ? { ...p, open: true } : p))
+              }
+            >
+              ⌃
+            </button>
+          )}
           {sidebarId && (
             <Sidebar
               notes={notes}
               activeId={sidebarId}
-              onClose={() => setSidebarId(null)}
+              onClose={() => {
+                setSidebarId(null);
+                setDocPreview(null);
+              }}
               onSend={sendInSidebar}
               sending={sending}
+              devMode={config.devMode}
             />
           )}
+          {docPreview?.open && (() => {
+            const n = notes.find((x) => x.id === docPreview.noteId);
+            if (!n?.document) return null;
+            return (
+              <DocViewer
+                document={n.document}
+                onClose={() =>
+                  setDocPreview((p) => (p ? { ...p, open: false } : p))
+                }
+              />
+            );
+          })()}
         </div>
       ) : (
         <ConfigPanel config={config} onSave={setConfig} />

@@ -2,6 +2,20 @@ export type Provider = 'deepseek' | 'openai' | 'claude';
 export type LayoutDirection = 'vertical' | 'horizontal';
 export type Theme = 'light' | 'dark';
 
+export interface ToolCallRecord {
+  iteration: number;
+  name: string;
+  args: Record<string, unknown>;
+  result: string;
+}
+
+export interface DocumentPayload {
+  title: string;
+  base64: string; // base64-encoded .docx bytes
+}
+
+export type NoteKind = 'qa' | 'document';
+
 export interface StickyNote {
   id: string;
   x: number;
@@ -12,6 +26,9 @@ export interface StickyNote {
   loading?: boolean;
   error?: string;
   collapsed?: boolean;
+  toolCalls?: ToolCallRecord[];
+  kind?: NoteKind; // default 'qa' when absent
+  document?: DocumentPayload;
 }
 
 export interface AppConfig {
@@ -28,6 +45,7 @@ export interface AppConfig {
   };
   layoutDirection: LayoutDirection;
   theme: Theme;
+  devMode: boolean;
 }
 
 export interface ChatMessage {

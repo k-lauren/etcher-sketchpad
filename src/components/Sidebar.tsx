@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { StickyNote } from '../types';
+import { Markdown } from './Markdown';
 
 interface Props {
   notes: StickyNote[];
@@ -7,9 +8,10 @@ interface Props {
   onClose: () => void;
   onSend: (parentId: string, question: string) => void;
   sending: boolean;
+  devMode: boolean;
 }
 
-export function Sidebar({ notes, activeId, onClose, onSend, sending }: Props) {
+export function Sidebar({ notes, activeId, onClose, onSend, sending, devMode }: Props) {
   const [draft, setDraft] = useState('');
   const [fullscreen, setFullscreen] = useState(false);
 
@@ -62,15 +64,46 @@ export function Sidebar({ notes, activeId, onClose, onSend, sending }: Props) {
         ) : (
           chain.map((n) => (
             <div key={n.id}>
-              {n.question && (
+              {n.kind === 'document' && n.document && (
+                <div className="chat-msg doc-card">
+                  <span className="doc-viewer-icon">📄</span>
+                  <span className="doc-card-title">{n.document.title}</span>
+                </div>
+              )}
+              {n.kind !== 'document' && n.question && (
                 <>
                   <div className="chat-msg user">{n.question}</div>
                 </>
               )}
+              {devMode && n.toolCalls && n.toolCalls.length > 0 && (
+                <div className="chat-toolcalls">
+                  <div className="dev-toolcalls-title">
+                    Tool calls ({n.toolCalls.length})
+                  </div>
+                  {n.toolCalls.map((tc, i) => (
+                    <details key={i} className="dev-toolcall">
+                      <summary>
+                        <span className="dev-toolcall-name">{tc.name}</span>
+                        <span className="dev-toolcall-iter">#{tc.iteration}</span>
+                      </summary>
+                      <div className="dev-toolcall-section">
+                        <div className="dev-toolcall-label">args</div>
+                        <pre className="dev-toolcall-body">
+                          {JSON.stringify(tc.args, null, 2)}
+                        </pre>
+                      </div>
+                      <div className="dev-toolcall-section">
+                        <div className="dev-toolcall-label">result</div>
+                        <pre className="dev-toolcall-body">{tc.result}</pre>
+                      </div>
+                    </details>
+                  ))}
+                </div>
+              )}
               {(n.answer || n.loading) && (
                 <>
                   <div className="chat-msg assistant">
-                    {n.loading ? 'Thinking…' : n.answer}
+                    {n.loading ? 'Thinking…' : <Markdown>{n.answer}</Markdown>}
                   </div>
                 </>
               )}
