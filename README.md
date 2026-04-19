@@ -24,7 +24,7 @@ Context for inference is built by bolting together draggable sticky notes (Q&A p
   chain in a traditional chat view on the right. Continuing the chat appends a new
   linked sticky to the chain on the canvas.
 - **Config tab** — switch between DeepSeek, OpenAI, and Claude; paste API keys and
-  override model names. The provided DeepSeek key is preloaded.
+  override model names. The provided DeepSeek key is preloaded (this has been deprecated — API key no longer preloaded).
 - **Persistence** — canvas state and config persist in `localStorage`.
 
 ## Run
