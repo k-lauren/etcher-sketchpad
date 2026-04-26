@@ -20,6 +20,8 @@ export const defaultConfig: AppConfig = {
   layoutDirection: 'vertical',
   theme: 'light',
   devMode: false,
+  settingsAsOverlay: false,
+  saasMode: false,
 };
 
 export function loadNotes(): StickyNote[] {

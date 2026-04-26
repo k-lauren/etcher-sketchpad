@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import type { StickyNote } from '../types';
 import { Markdown } from './Markdown';
+import { DocIcon } from './icons';
 
 interface Props {
   note: StickyNote;
@@ -78,7 +79,10 @@ export function StickyNoteCard({
             onPointerDown(e, note.id);
           }}
         >
-          <span className="sticky-chain-badge">📄 document</span>
+          <span className="sticky-chain-badge">
+            <DocIcon size={12} className="inline-icon" />
+            document
+          </span>
           <div className="sticky-actions" onPointerDown={(e) => e.stopPropagation()}>
             <button
               className="icon-btn"

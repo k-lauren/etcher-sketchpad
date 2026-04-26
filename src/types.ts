@@ -1,4 +1,10 @@
 export type Provider = 'deepseek' | 'openai' | 'claude';
+
+export interface CanvasTransform {
+  x: number;
+  y: number;
+  scale: number;
+}
 export type LayoutDirection = 'vertical' | 'horizontal';
 export type Theme = 'light' | 'dark';
 
@@ -12,6 +18,8 @@ export interface ToolCallRecord {
 export interface DocumentPayload {
   title: string;
   base64: string; // base64-encoded .docx bytes
+  source?: string; // current markdown-ish body (updated by user edits)
+  originalSource?: string; // model's original markdown body, frozen at creation
 }
 
 export type NoteKind = 'qa' | 'document';
@@ -46,6 +54,8 @@ export interface AppConfig {
   layoutDirection: LayoutDirection;
   theme: Theme;
   devMode: boolean;
+  settingsAsOverlay: boolean;
+  saasMode: boolean;
 }
 
 export interface ChatMessage {

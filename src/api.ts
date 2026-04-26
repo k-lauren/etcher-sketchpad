@@ -3,6 +3,18 @@ import { DOC_ARTIFACT_MARKER, toolByName, toolsForAnthropic, toolsForOpenAI } fr
 
 const MAX_TOOL_ITERATIONS = 8;
 
+/**
+ * Shared system prompt. Nudges the model to call tools directly instead of
+ * narrating intent, and forces document creation through the tool channel
+ * rather than inline in the chat response.
+ */
+const SYSTEM_PROMPT =
+  'You have access to tools: wikipedia_search, wolfram_alpha, tavily_search, and create_document. ' +
+  'Call tools directly when needed — do not narrate your intent before calling them ' +
+  '(avoid phrases like "Let me call…" or "I will now use…"). ' +
+  'When the user asks you to create, draft, or write a document, you MUST invoke the create_document tool ' +
+  'with the full document body. Never produce the document text inline in your response; it must be delivered via the tool.';
+
 interface InferParams {
   config: AppConfig;
   messages: ChatMessage[];
@@ -68,10 +80,10 @@ async function runOpenAICompatibleLoop(
       ? config.model.openai || 'gpt-4o-mini'
       : config.model.deepseek || 'deepseek-chat';
 
-  const wire: Record<string, unknown>[] = messages.map((m) => ({
-    role: m.role,
-    content: m.content,
-  }));
+  const wire: Record<string, unknown>[] = [
+    { role: 'system', content: SYSTEM_PROMPT },
+    ...messages.map((m) => ({ role: m.role, content: m.content })),
+  ];
   const recorded: ToolCallRecord[] = [];
   const documents: DocumentPayload[] = [];
 
@@ -161,7 +173,8 @@ async function runAnthropicLoop(
       },
       body: JSON.stringify({
         model,
-        max_tokens: 2048,
+        max_tokens: 8192,
+        system: SYSTEM_PROMPT,
         tools: toolsForAnthropic(),
         messages: wire,
       }),

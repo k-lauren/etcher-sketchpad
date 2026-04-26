@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { AppConfig, ChatMessage, DocumentPayload, StickyNote } from './types';
+import type { AppConfig, CanvasTransform, ChatMessage, DocumentPayload, StickyNote } from './types';
 import { defaultConfig, loadConfig, loadNotes, saveConfig, saveNotes, uid } from './storage';
 import { infer } from './api';
 import { Canvas } from './components/Canvas';
 import { Sidebar } from './components/Sidebar';
 import { ConfigPanel } from './components/ConfigPanel';
-import { DocViewer } from './components/DocViewer';
+import { DocViewer, type DocViewerEntry } from './components/DocViewer';
 import { autoLayout } from './layout';
 
 type Tab = 'canvas' | 'config';
@@ -24,6 +24,10 @@ export default function App() {
   const [sidebarId, setSidebarId] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [docPreview, setDocPreview] = useState<{ noteId: string; open: boolean } | null>(null);
+  const [docViewerEntry, setDocViewerEntry] = useState<DocViewerEntry>('default');
+  const [sidebarFullscreen, setSidebarFullscreen] = useState(false);
+  const [canvasTransform, setCanvasTransform] = useState<CanvasTransform>({ x: 0, y: 0, scale: 1 });
+  const [configOverlayOpen, setConfigOverlayOpen] = useState(false);
   const measureRef = useRef<(() => Map<string, { w: number; h: number }>) | null>(null);
 
   useEffect(() => { saveNotes(notes); }, [notes]);
@@ -31,6 +35,22 @@ export default function App() {
   useEffect(() => {
     document.body.classList.toggle('theme-dark', config.theme === 'dark');
   }, [config.theme]);
+  // If the user enables overlay mode while on the config tab, pop back to
+  // canvas and open the overlay so the preference takes effect immediately.
+  useEffect(() => {
+    if (config.settingsAsOverlay && tab === 'config') {
+      setTab('canvas');
+      setConfigOverlayOpen(true);
+    }
+  }, [config.settingsAsOverlay, tab]);
+  useEffect(() => {
+    if (!configOverlayOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setConfigOverlayOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [configOverlayOpen]);
 
   const buildDocNotes = (
     all: StickyNote[],
@@ -50,6 +70,36 @@ export default function App() {
       kind: 'document' as const,
       document: doc,
     }));
+  };
+
+  // For each parent note id, the document notes attached to it. Used to
+  // surface attached document content into the LLM context window.
+  const docsByParent = (all: StickyNote[]): Map<string, StickyNote[]> => {
+    const m = new Map<string, StickyNote[]>();
+    for (const n of all) {
+      if (n.kind === 'document' && n.parentId) {
+        const arr = m.get(n.parentId) ?? [];
+        arr.push(n);
+        m.set(n.parentId, arr);
+      }
+    }
+    return m;
+  };
+
+  const formatDocForContext = (doc: DocumentPayload): string => {
+    const body = doc.source ?? '(document content unavailable)';
+    let out = `[Attached document — title: "${doc.title}"]\n\n${body}`;
+    if (
+      doc.originalSource &&
+      doc.source &&
+      doc.source !== doc.originalSource
+    ) {
+      out +=
+        `\n\n[Note: the user has edited this document since I generated it. ` +
+        `The version above is the current, user-edited version. ` +
+        `My original AI-generated version was:]\n\n${doc.originalSource}`;
+    }
+    return out;
   };
 
   const chainFor = (id: string): StickyNote[] => {
@@ -93,6 +143,7 @@ export default function App() {
 
     const messages: ChatMessage[] = [];
     const qaChain = chain.filter((n) => n.kind !== 'document');
+    const attachedDocs = docsByParent(updatedNotes);
     for (let i = 0; i < qaChain.length; i++) {
       const n = qaChain[i];
       if (i === qaChain.length - 1) {
@@ -100,6 +151,14 @@ export default function App() {
       } else {
         if (n.question) messages.push({ role: 'user', content: n.question });
         if (n.answer) messages.push({ role: 'assistant', content: n.answer });
+        for (const docNote of attachedDocs.get(n.id) ?? []) {
+          if (docNote.document) {
+            messages.push({
+              role: 'assistant',
+              content: formatDocForContext(docNote.document),
+            });
+          }
+        }
       }
     }
 
@@ -220,10 +279,19 @@ export default function App() {
     }
 
     const messages: ChatMessage[] = [];
+    const attachedDocs = docsByParent(notes);
     for (const n of chain) {
       if (n.kind === 'document') continue;
       if (n.question) messages.push({ role: 'user', content: n.question });
       if (n.answer) messages.push({ role: 'assistant', content: n.answer });
+      for (const docNote of attachedDocs.get(n.id) ?? []) {
+        if (docNote.document) {
+          messages.push({
+            role: 'assistant',
+            content: formatDocForContext(docNote.document),
+          });
+        }
+      }
     }
     messages.push({ role: 'user', content: question });
 
@@ -304,8 +372,19 @@ export default function App() {
             Canvas
           </button>
           <button
-            className={'tab' + (tab === 'config' ? ' active' : '')}
-            onClick={() => setTab('config')}
+            className={
+              'tab' +
+              ((tab === 'config' || (config.settingsAsOverlay && configOverlayOpen))
+                ? ' active'
+                : '')
+            }
+            onClick={() => {
+              if (config.settingsAsOverlay) {
+                setConfigOverlayOpen((v) => !v);
+              } else {
+                setTab('config');
+              }
+            }}
           >
             Config
           </button>
@@ -334,6 +413,8 @@ export default function App() {
             onAutoLayout={runAutoLayout}
             devMode={config.devMode}
             measureRef={measureRef}
+            initialTransform={canvasTransform}
+            onTransformChange={setCanvasTransform}
           />
           {!docPreview?.open && (
             <div className="canvas-toolbar" onPointerDown={(e) => e.stopPropagation()}>
@@ -359,9 +440,10 @@ export default function App() {
               title="Expand attached document"
               aria-label="Expand attached document"
               onPointerDown={(e) => e.stopPropagation()}
-              onClick={() =>
-                setDocPreview((p) => (p ? { ...p, open: true } : p))
-              }
+              onClick={() => {
+                setDocViewerEntry('default');
+                setDocPreview((p) => (p ? { ...p, open: true } : p));
+              }}
             >
               <svg
                 width="22"
@@ -385,20 +467,42 @@ export default function App() {
               onClose={() => {
                 setSidebarId(null);
                 setDocPreview(null);
+                setSidebarFullscreen(false);
               }}
               onSend={sendInSidebar}
               sending={sending}
               devMode={config.devMode}
+              fullscreen={sidebarFullscreen}
+              onToggleFullscreen={() => setSidebarFullscreen((v) => !v)}
+              onOpenDocument={(noteId) => {
+                setDocViewerEntry(sidebarFullscreen ? 'from-fullscreen' : 'default');
+                setDocPreview({ noteId, open: true });
+                setSidebarFullscreen(false);
+              }}
             />
           )}
           {docPreview?.open && (() => {
             const n = notes.find((x) => x.id === docPreview.noteId);
             if (!n?.document) return null;
+            const noteId = n.id;
             return (
               <DocViewer
                 document={n.document}
+                entry={docViewerEntry}
+                onCloseStart={() => {
+                  if (docViewerEntry === 'from-fullscreen') {
+                    setSidebarFullscreen(true);
+                  }
+                }}
                 onClose={() =>
                   setDocPreview((p) => (p ? { ...p, open: false } : p))
+                }
+                onUpdateDocument={(payload) =>
+                  setNotes((prev) =>
+                    prev.map((x) =>
+                      x.id === noteId ? { ...x, document: payload } : x
+                    )
+                  )
                 }
               />
             );
@@ -406,6 +510,27 @@ export default function App() {
         </div>
       ) : (
         <ConfigPanel config={config} onSave={setConfig} />
+      )}
+
+      {configOverlayOpen && (
+        <div
+          className="settings-overlay-backdrop"
+          onClick={() => setConfigOverlayOpen(false)}
+        >
+          <div
+            className="settings-overlay-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className="settings-overlay-close"
+              aria-label="Close settings"
+              onClick={() => setConfigOverlayOpen(false)}
+            >
+              ×
+            </button>
+            <ConfigPanel config={config} onSave={setConfig} />
+          </div>
+        </div>
       )}
     </div>
   );

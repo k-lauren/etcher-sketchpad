@@ -1,6 +1,6 @@
 import { useRef, useState, useCallback, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import type { StickyNote } from '../types';
+import type { CanvasTransform, StickyNote } from '../types';
 import { StickyNoteCard } from './StickyNoteCard';
 import { getHiddenIds } from '../layout';
 
@@ -20,18 +20,14 @@ interface Props {
   onAutoLayout: (sizes: Map<string, { w: number; h: number }>) => void;
   devMode: boolean;
   measureRef?: React.MutableRefObject<(() => Map<string, { w: number; h: number }>) | null>;
+  initialTransform?: CanvasTransform;
+  onTransformChange?: (t: CanvasTransform) => void;
 }
 
 const STICKY_W = 220;
 const STICKY_H_ESTIMATE = 160;
 const MIN_SCALE = 0.2;
 const MAX_SCALE = 4;
-
-interface Transform {
-  x: number;
-  y: number;
-  scale: number;
-}
 
 export function Canvas({
   notes,
@@ -49,13 +45,25 @@ export function Canvas({
   onAutoLayout,
   devMode,
   measureRef,
+  initialTransform,
+  onTransformChange,
 }: Props) {
   const wrapRef = useRef<HTMLDivElement | null>(null);
-  const [transform, setTransform] = useState<Transform>({ x: 0, y: 0, scale: 1 });
+  const [transform, setTransform] = useState<CanvasTransform>(
+    initialTransform ?? { x: 0, y: 0, scale: 1 }
+  );
   const transformRef = useRef(transform);
   useEffect(() => {
     transformRef.current = transform;
   }, [transform]);
+
+  // Save viewport to parent when unmounting so it survives tab switches.
+  useEffect(() => {
+    return () => {
+      onTransformChange?.(transformRef.current);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const dragRef = useRef<
     | { kind: 'note'; id: string; offsetX: number; offsetY: number }
@@ -239,6 +247,14 @@ export function Canvas({
 
   const resetView = () => setTransform({ x: 0, y: 0, scale: 1 });
 
+  // The zoom-controls and canvas-hint are rendered via portal into the
+  // .canvas-page so they anchor to the page (and therefore the sidebar edge
+  // via --sb-w) rather than to the shrinking .canvas-wrap.
+  const [overlayTarget, setOverlayTarget] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    setOverlayTarget(wrapRef.current?.parentElement ?? null);
+  }, []);
+
   const measureSizes = useCallback((): Map<string, { w: number; h: number }> => {
     const out = new Map<string, { w: number; h: number }>();
     const el = wrapRef.current;
@@ -349,23 +365,29 @@ export function Canvas({
         ))}
       </div>
 
-      <div className="zoom-controls" onPointerDown={(e) => e.stopPropagation()}>
-        <button className="zoom-btn" title="Zoom out" onClick={zoomButton(1 / 1.2)}>
-          −
-        </button>
-        <div className="zoom-readout">{Math.round(transform.scale * 100)}%</div>
-        <button className="zoom-btn" title="Zoom in" onClick={zoomButton(1.2)}>
-          +
-        </button>
-        <button className="zoom-btn small" title="Reset view" onClick={resetView}>
-          Reset
-        </button>
-      </div>
+      {overlayTarget &&
+        createPortal(
+          <>
+            <div className="zoom-controls" onPointerDown={(e) => e.stopPropagation()}>
+              <button className="zoom-btn" title="Zoom out" onClick={zoomButton(1 / 1.2)}>
+                −
+              </button>
+              <div className="zoom-readout">{Math.round(transform.scale * 100)}%</div>
+              <button className="zoom-btn" title="Zoom in" onClick={zoomButton(1.2)}>
+                +
+              </button>
+              <button className="zoom-btn small" title="Reset view" onClick={resetView}>
+                Reset
+              </button>
+            </div>
 
-      <div className="canvas-hint">
-        <strong>Canvas</strong> · Double-click to add sticky · Drag header to move · Drop onto another to chain ·
-        Scroll to zoom · Drag background to pan
-      </div>
+            <div className="canvas-hint">
+              <strong>Canvas</strong> · Double-click to add sticky · Drag header to move · Drop onto another to chain ·
+              Scroll to zoom · Drag background to pan
+            </div>
+          </>,
+          overlayTarget
+        )}
     </div>
   );
 }

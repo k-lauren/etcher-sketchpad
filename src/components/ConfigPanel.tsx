@@ -124,15 +124,45 @@ export function ConfigPanel({ config, onSave }: Props) {
 
         <div className="field">
           <label>Dev Mode</label>
-          <div className="provider-row">
+          <div className="toggle-row">
             <button
-              className={'provider-chip' + (draft.devMode ? ' active' : '')}
+              className={'toggle-chip' + (draft.devMode ? ' active' : '')}
               onClick={() => update({ devMode: !draft.devMode })}
             >
               {draft.devMode ? 'On' : 'Off'}
             </button>
-            <span style={{ fontSize: 12, color: '#888', alignSelf: 'center' }}>
+            <span className="toggle-help">
               Shows tool calls and their results on sticky notes and in the sidebar.
+            </span>
+          </div>
+        </div>
+
+        <div className="field">
+          <label>Settings as Overlay</label>
+          <div className="toggle-row">
+            <button
+              className={'toggle-chip' + (draft.settingsAsOverlay ? ' active' : '')}
+              onClick={() => update({ settingsAsOverlay: !draft.settingsAsOverlay })}
+            >
+              {draft.settingsAsOverlay ? 'On' : 'Off'}
+            </button>
+            <span className="toggle-help">
+              Open Settings as a floating modal instead of a full-page tab.
+            </span>
+          </div>
+        </div>
+
+        <div className="field">
+          <label>SaaS Mode</label>
+          <div className="toggle-row">
+            <button
+              className={'toggle-chip' + (draft.saasMode ? ' active' : '')}
+              onClick={() => update({ saasMode: !draft.saasMode })}
+            >
+              {draft.saasMode ? 'On' : 'Off'}
+            </button>
+            <span className="toggle-help">
+              Switch to a clean, modern product UI — blue accents, card-style nodes, chat-bubble sidebar.
             </span>
           </div>
         </div>

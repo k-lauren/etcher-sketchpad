@@ -171,7 +171,7 @@ const createDocument: Tool = {
       const c = String(content ?? '');
       const blob = await generateDocx(t, c);
       const base64 = await blobToBase64(blob);
-      return `${DOC_ARTIFACT_MARKER}${JSON.stringify({ title: t, base64 })}`;
+      return `${DOC_ARTIFACT_MARKER}${JSON.stringify({ title: t, base64, source: c, originalSource: c })}`;
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       return `create_document error: ${msg}`;

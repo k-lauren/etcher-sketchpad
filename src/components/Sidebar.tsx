@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { StickyNote } from '../types';
 import { Markdown } from './Markdown';
+import { DocIcon } from './icons';
 
 interface Props {
   notes: StickyNote[];
@@ -9,11 +10,23 @@ interface Props {
   onSend: (parentId: string, question: string) => void;
   sending: boolean;
   devMode: boolean;
+  fullscreen: boolean;
+  onToggleFullscreen: () => void;
+  onOpenDocument: (noteId: string) => void;
 }
 
-export function Sidebar({ notes, activeId, onClose, onSend, sending, devMode }: Props) {
+export function Sidebar({
+  notes,
+  activeId,
+  onClose,
+  onSend,
+  sending,
+  devMode,
+  fullscreen,
+  onToggleFullscreen,
+  onOpenDocument,
+}: Props) {
   const [draft, setDraft] = useState('');
-  const [fullscreen, setFullscreen] = useState(false);
 
   const chain = useMemo(() => {
     if (!activeId) return [];
@@ -45,7 +58,7 @@ export function Sidebar({ notes, activeId, onClose, onSend, sending, devMode }: 
         <div style={{ display: 'flex', gap: 4 }}>
           <button
             className="icon-btn"
-            onClick={() => setFullscreen((v) => !v)}
+            onClick={onToggleFullscreen}
             title={fullscreen ? 'Exit fullscreen' : 'Fullscreen chat'}
           >
             {fullscreen ? '⤡' : '⤢'}
@@ -65,10 +78,15 @@ export function Sidebar({ notes, activeId, onClose, onSend, sending, devMode }: 
           chain.map((n) => (
             <div key={n.id}>
               {n.kind === 'document' && n.document && (
-                <div className="chat-msg doc-card">
-                  <span className="doc-viewer-icon">📄</span>
+                <button
+                  type="button"
+                  className="chat-msg doc-card"
+                  onClick={() => onOpenDocument(n.id)}
+                  title="Open document"
+                >
+                  <DocIcon size={16} className="doc-card-icon" />
                   <span className="doc-card-title">{n.document.title}</span>
-                </div>
+                </button>
               )}
               {n.kind !== 'document' && n.question && (
                 <>
