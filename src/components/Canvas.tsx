@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import type { CanvasTransform, StickyNote } from '../types';
 import { StickyNoteCard } from './StickyNoteCard';
 import { getHiddenIds } from '../layout';
+import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 
 interface Props {
   notes: StickyNote[];
@@ -19,6 +20,7 @@ interface Props {
   onToggleCollapse: (id: string) => void;
   onAutoLayout: (sizes: Map<string, { w: number; h: number }>) => void;
   devMode: boolean;
+  proMode?: boolean;
   measureRef?: React.MutableRefObject<(() => Map<string, { w: number; h: number }>) | null>;
   initialTransform?: CanvasTransform;
   onTransformChange?: (t: CanvasTransform) => void;
@@ -44,6 +46,7 @@ export function Canvas({
   onToggleCollapse,
   onAutoLayout,
   devMode,
+  proMode = false,
   measureRef,
   initialTransform,
   onTransformChange,
@@ -324,6 +327,54 @@ export function Canvas({
             .map((n) => {
               const parent = notes.find((p) => p.id === n.parentId);
               if (!parent) return null;
+              if (proMode) {
+                // Pick the closest pair of edges so chains can flow in any
+                // direction (left, right, up, down) instead of always
+                // emerging from the right side of the parent.
+                const proW = 280;
+                const proH = STICKY_H_ESTIMATE;
+                const pcx = parent.x + proW / 2;
+                const pcy = parent.y + proH / 2;
+                const ccx = n.x + proW / 2;
+                const ccy = n.y + proH / 2;
+                const dx = ccx - pcx;
+                const dy = ccy - pcy;
+                let x1: number, y1: number, x2: number, y2: number;
+                let c1x: number, c1y: number, c2x: number, c2y: number;
+                if (Math.abs(dx) >= Math.abs(dy)) {
+                  // Horizontal routing: parent.right→child.left or vice versa.
+                  if (dx >= 0) {
+                    x1 = parent.x + proW; y1 = pcy; x2 = n.x;          y2 = ccy;
+                  } else {
+                    x1 = parent.x;        y1 = pcy; x2 = n.x + proW;   y2 = ccy;
+                  }
+                  const midX = (x1 + x2) / 2;
+                  c1x = midX; c1y = y1;
+                  c2x = midX; c2y = y2;
+                } else {
+                  // Vertical routing: parent.bottom→child.top or vice versa.
+                  if (dy >= 0) {
+                    x1 = pcx; y1 = parent.y + proH; x2 = ccx; y2 = n.y;
+                  } else {
+                    x1 = pcx; y1 = parent.y;        x2 = ccx; y2 = n.y + proH;
+                  }
+                  const midY = (y1 + y2) / 2;
+                  c1x = x1; c1y = midY;
+                  c2x = x2; c2y = midY;
+                }
+                const d = `M ${x1} ${y1} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${x2} ${y2}`;
+                return (
+                  <path
+                    key={n.id}
+                    className="connection-link"
+                    d={d}
+                    fill="none"
+                    strokeWidth="1.5"
+                    strokeDasharray="6 4"
+                  />
+                );
+              }
+              // Classic straight center-to-center line.
               const x1 = parent.x + STICKY_W / 2;
               const y1 = parent.y + STICKY_H_ESTIMATE / 2;
               const x2 = n.x + STICKY_W / 2;
@@ -361,6 +412,7 @@ export function Canvas({
             onAsk={onAsk}
             onToggleCollapse={onToggleCollapse}
             devMode={devMode}
+            proMode={proMode}
           />
         ))}
       </div>
@@ -370,14 +422,15 @@ export function Canvas({
           <>
             <div className="zoom-controls" onPointerDown={(e) => e.stopPropagation()}>
               <button className="zoom-btn" title="Zoom out" onClick={zoomButton(1 / 1.2)}>
-                −
+                {proMode ? <ZoomOut size={15} /> : '−'}
               </button>
               <div className="zoom-readout">{Math.round(transform.scale * 100)}%</div>
               <button className="zoom-btn" title="Zoom in" onClick={zoomButton(1.2)}>
-                +
+                {proMode ? <ZoomIn size={15} /> : '+'}
               </button>
+              {proMode && <span className="zoom-divider" aria-hidden="true" />}
               <button className="zoom-btn small" title="Reset view" onClick={resetView}>
-                Reset
+                {proMode ? <RotateCcw size={13} /> : 'Reset'}
               </button>
             </div>
 

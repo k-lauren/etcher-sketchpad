@@ -7,6 +7,8 @@ import { Sidebar } from './components/Sidebar';
 import { ConfigPanel } from './components/ConfigPanel';
 import { DocViewer, type DocViewerEntry } from './components/DocViewer';
 import { autoLayout } from './layout';
+import { LayoutGrid, Settings as SettingsIcon, Cpu } from 'lucide-react';
+import { ProLogo } from './components/ProLogo';
 
 type Tab = 'canvas' | 'config';
 
@@ -35,6 +37,10 @@ export default function App() {
   useEffect(() => {
     document.body.classList.toggle('theme-dark', config.theme === 'dark');
   }, [config.theme]);
+  useEffect(() => {
+    document.body.classList.toggle('mode-pro', config.saasMode);
+  }, [config.saasMode]);
+  const proMode = config.saasMode;
   // If the user enables overlay mode while on the config tab, pop back to
   // canvas and open the overlay so the preference takes effect immediately.
   useEffect(() => {
@@ -358,17 +364,29 @@ export default function App() {
     addNote(160 + Math.random() * 200, 160 + Math.random() * 200);
 
   return (
-    <div className="app">
+    <div className={'app' + (proMode ? ' pro' : '')}>
       <div className="header">
         <div className="logo">
-          <span className="logo-dot" />
-          Etcher-Sketchpad
+          {proMode ? (
+            <ProLogo size={28} />
+          ) : (
+            <span className="logo-dot" />
+          )}
+          {proMode ? (
+            <>
+              Etcher
+              <span className="logo-sub">Sketchpad</span>
+            </>
+          ) : (
+            'Etcher-Sketchpad'
+          )}
         </div>
         <div className="tabs">
           <button
             className={'tab' + (tab === 'canvas' ? ' active' : '')}
             onClick={() => setTab('canvas')}
           >
+            {proMode && <LayoutGrid size={14} className="tab-icon" />}
             Canvas
           </button>
           <button
@@ -386,13 +404,23 @@ export default function App() {
               }
             }}
           >
-            Config
+            {proMode && <SettingsIcon size={14} className="tab-icon" />}
+            {proMode ? 'Settings' : 'Config'}
           </button>
         </div>
         <div className="header-spacer" />
-        <div style={{ fontSize: 12, color: '#888' }}>
-          {config.provider} · {config.model[config.provider]}
-        </div>
+        {proMode ? (
+          <div className="provider-pill">
+            <Cpu size={12} />
+            <span className="provider-pill-name">{config.provider}</span>
+            <span className="provider-pill-sep">·</span>
+            <span className="provider-pill-model">{config.model[config.provider]}</span>
+          </div>
+        ) : (
+          <div style={{ fontSize: 12, color: '#888' }}>
+            {config.provider} · {config.model[config.provider]}
+          </div>
+        )}
       </div>
 
       {tab === 'canvas' ? (
@@ -412,26 +440,50 @@ export default function App() {
             onToggleCollapse={toggleCollapse}
             onAutoLayout={runAutoLayout}
             devMode={config.devMode}
+            proMode={proMode}
             measureRef={measureRef}
             initialTransform={canvasTransform}
             onTransformChange={setCanvasTransform}
           />
           {!docPreview?.open && (
             <div className="canvas-toolbar" onPointerDown={(e) => e.stopPropagation()}>
-              <button
-                className="toolbar-btn tidy"
-                title="Auto-arrange into tidy trees"
-                onClick={handleHeaderAutoLayout}
-              >
-                ⊞
-              </button>
-              <button
-                className="toolbar-btn"
-                title="Add new chain"
-                onClick={handleHeaderAddNote}
-              >
-                +
-              </button>
+              {proMode ? (
+                <>
+                  <button
+                    className="toolbar-btn tidy"
+                    title="Auto-arrange into tidy trees"
+                    onClick={handleHeaderAutoLayout}
+                  >
+                    <LayoutGrid size={14} />
+                    Tidy
+                  </button>
+                  <button
+                    className="toolbar-btn"
+                    title="Add new chain"
+                    onClick={handleHeaderAddNote}
+                  >
+                    <span aria-hidden="true" style={{ fontSize: 16, lineHeight: 1, fontWeight: 700 }}>+</span>
+                    New node
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    className="toolbar-btn tidy"
+                    title="Auto-arrange into tidy trees"
+                    onClick={handleHeaderAutoLayout}
+                  >
+                    ⊞
+                  </button>
+                  <button
+                    className="toolbar-btn"
+                    title="Add new chain"
+                    onClick={handleHeaderAddNote}
+                  >
+                    +
+                  </button>
+                </>
+              )}
             </div>
           )}
           {docPreview !== null && !docPreview.open && (
@@ -472,6 +524,7 @@ export default function App() {
               onSend={sendInSidebar}
               sending={sending}
               devMode={config.devMode}
+              proMode={proMode}
               fullscreen={sidebarFullscreen}
               onToggleFullscreen={() => setSidebarFullscreen((v) => !v)}
               onOpenDocument={(noteId) => {
@@ -509,7 +562,7 @@ export default function App() {
           })()}
         </div>
       ) : (
-        <ConfigPanel config={config} onSave={setConfig} />
+        <ConfigPanel config={config} onSave={setConfig} proMode={proMode} />
       )}
 
       {configOverlayOpen && (
@@ -528,7 +581,7 @@ export default function App() {
             >
               ×
             </button>
-            <ConfigPanel config={config} onSave={setConfig} />
+            <ConfigPanel config={config} onSave={setConfig} proMode={proMode} />
           </div>
         </div>
       )}

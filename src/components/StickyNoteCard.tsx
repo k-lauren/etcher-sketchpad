@@ -2,6 +2,19 @@ import { useState, useRef, useEffect } from 'react';
 import type { StickyNote } from '../types';
 import { Markdown } from './Markdown';
 import { DocIcon } from './icons';
+import {
+  Eye,
+  Copy,
+  Scissors,
+  Trash2,
+  ChevronDown,
+  ChevronRight,
+  MessageSquare,
+  GitBranch,
+  FileText,
+  Loader2,
+  Send,
+} from 'lucide-react';
 
 interface Props {
   note: StickyNote;
@@ -18,6 +31,7 @@ interface Props {
   onAsk: (id: string, question: string) => void;
   onToggleCollapse: (id: string) => void;
   devMode: boolean;
+  proMode?: boolean;
 }
 
 export function StickyNoteCard({
@@ -35,6 +49,7 @@ export function StickyNoteCard({
   onAsk,
   onToggleCollapse,
   devMode,
+  proMode = false,
 }: Props) {
   const [draft, setDraft] = useState('');
   const [editing, setEditing] = useState(!note.question);
@@ -55,12 +70,14 @@ export function StickyNoteCard({
     onAsk(note.id, q);
   };
 
+  /* ───────── Document card ───────── */
   if (isDoc) {
     return (
       <div
         data-note-id={note.id}
         className={
           'sticky doc' +
+          (proMode ? ' pro' : '') +
           (selected ? ' selected' : '') +
           (dropTarget ? ' drop-target' : '')
         }
@@ -80,71 +97,70 @@ export function StickyNoteCard({
           }}
         >
           <span className="sticky-chain-badge">
-            <DocIcon size={12} className="inline-icon" />
-            document
+            {proMode ? (
+              <FileText size={13} className="inline-icon" />
+            ) : (
+              <DocIcon size={12} className="inline-icon" />
+            )}
+            {proMode ? 'Document' : 'document'}
           </span>
           <div className="sticky-actions" onPointerDown={(e) => e.stopPropagation()}>
-            <button
-              className="icon-btn"
+            <ActionBtn
+              proMode={proMode}
               title="Open document"
-              onClick={(e) => {
-                e.stopPropagation();
-                onOpenChain(note.id);
-              }}
-            >
-              🔍
-            </button>
-            <button
-              className="icon-btn"
+              onClick={() => onOpenChain(note.id)}
+              proIcon={<Eye size={14} />}
+              classicGlyph="🔍"
+            />
+            <ActionBtn
+              proMode={proMode}
               title="Duplicate"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDuplicate(note.id);
-              }}
-            >
-              ⎘
-            </button>
+              onClick={() => onDuplicate(note.id)}
+              proIcon={<Copy size={14} />}
+              classicGlyph="⎘"
+            />
             {isChild && (
-              <button
-                className="icon-btn"
+              <ActionBtn
+                proMode={proMode}
                 title="Detach from parent"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDetach(note.id);
-                }}
-              >
-                ✂
-              </button>
+                onClick={() => onDetach(note.id)}
+                proIcon={<Scissors size={14} />}
+                classicGlyph="✂"
+              />
             )}
-            <button
-              className="icon-btn"
+            <ActionBtn
+              proMode={proMode}
               title="Delete"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(note.id);
-              }}
-            >
-              ✕
-            </button>
+              onClick={() => onDelete(note.id)}
+              proIcon={<Trash2 size={14} />}
+              classicGlyph="✕"
+            />
           </div>
         </div>
-        <div className="doc-title">{note.document?.title ?? 'Untitled document'}</div>
-        <div className="doc-hint">Double-click to open</div>
+        <div className="doc-title">
+          {proMode && <FileText size={14} style={{ verticalAlign: -2, marginRight: 6 }} />}
+          {note.document?.title ?? 'Untitled document'}
+        </div>
+        <div className="doc-hint">
+          {proMode ? 'Double-click to preview' : 'Double-click to open'}
+        </div>
       </div>
     );
   }
 
+  /* ───────── Q/A card ───────── */
   return (
     <div
       data-note-id={note.id}
       className={
         'sticky' +
+        (proMode ? ' pro' : '') +
         (isChild ? ' child' : '') +
         (selected ? ' selected' : '') +
         (dropTarget ? ' drop-target' : '')
       }
       style={{ left: note.x, top: note.y }}
-      onPointerDown={(e) => {
+      onPointerDown={() => {
         onSelect(note.id);
       }}
       onDoubleClick={(e) => {
@@ -161,72 +177,80 @@ export function StickyNoteCard({
         }}
       >
         <span className="sticky-chain-badge">
-          {isChild ? '↳ chained' : 'root'}
+          {proMode ? (
+            <>
+              {isChild ? (
+                <GitBranch
+                  size={13}
+                  className="inline-icon"
+                  style={{ transform: 'rotate(180deg)' }}
+                />
+              ) : (
+                <MessageSquare size={13} className="inline-icon" />
+              )}
+              {isChild ? 'Chained' : 'Root'}
+            </>
+          ) : isChild ? (
+            '↳ chained'
+          ) : (
+            'root'
+          )}
           {note.collapsed && hiddenDescendantCount > 0 && (
-            <span className="sticky-collapsed-count"> · +{hiddenDescendantCount} hidden</span>
+            <span className="sticky-collapsed-count">
+              {' '}
+              · {proMode ? 'collapsed' : `+${hiddenDescendantCount} hidden`}
+            </span>
           )}
         </span>
         <div className="sticky-actions" onPointerDown={(e) => e.stopPropagation()}>
           {hasChildren && (
-            <button
-              className="icon-btn"
+            <ActionBtn
+              proMode={proMode}
               title={note.collapsed ? 'Expand children' : 'Collapse children'}
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggleCollapse(note.id);
-              }}
-            >
-              {note.collapsed ? '▸' : '▾'}
-            </button>
+              onClick={() => onToggleCollapse(note.id)}
+              proIcon={
+                note.collapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />
+              }
+              classicGlyph={note.collapsed ? '▸' : '▾'}
+            />
           )}
-          <button
-            className="icon-btn"
+          <ActionBtn
+            proMode={proMode}
             title="Open chain in sidebar"
-            onClick={(e) => {
-              e.stopPropagation();
-              onOpenChain(note.id);
-            }}
-          >
-            🔍
-          </button>
-          <button
-            className="icon-btn"
+            onClick={() => onOpenChain(note.id)}
+            proIcon={<Eye size={14} />}
+            classicGlyph="🔍"
+          />
+          <ActionBtn
+            proMode={proMode}
             title="Duplicate"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDuplicate(note.id);
-            }}
-          >
-            ⎘
-          </button>
+            onClick={() => onDuplicate(note.id)}
+            proIcon={<Copy size={14} />}
+            classicGlyph="⎘"
+          />
           {isChild && (
-            <button
-              className="icon-btn"
+            <ActionBtn
+              proMode={proMode}
               title="Detach from parent"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDetach(note.id);
-              }}
-            >
-              ✂
-            </button>
+              onClick={() => onDetach(note.id)}
+              proIcon={<Scissors size={14} />}
+              classicGlyph="✂"
+            />
           )}
-          <button
-            className="icon-btn"
+          <ActionBtn
+            proMode={proMode}
             title="Delete"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(note.id);
-            }}
-          >
-            ✕
-          </button>
+            onClick={() => onDelete(note.id)}
+            proIcon={<Trash2 size={14} />}
+            classicGlyph="✕"
+          />
         </div>
       </div>
 
       {!editing && note.question ? (
         <div className="sticky-q" onClick={(e) => e.stopPropagation()}>
-          Q: {note.question}
+          {!proMode && 'Q: '}
+          {note.question}
         </div>
       ) : (
         <textarea
@@ -251,9 +275,18 @@ export function StickyNoteCard({
           onClick={(e) => e.stopPropagation()}
         >
           {note.loading ? (
-            'Thinking…'
+            proMode ? (
+              <span className="sticky-a-loading">
+                <Loader2 size={14} className="spin" />
+                Generating response...
+              </span>
+            ) : (
+              'Thinking…'
+            )
           ) : note.answer ? (
             <Markdown>{note.answer}</Markdown>
+          ) : proMode ? (
+            'No response yet'
           ) : (
             'No answer yet'
           )}
@@ -308,6 +341,7 @@ export function StickyNoteCard({
               send();
             }}
           >
+            {proMode && <Send size={12} />}
             Ask
           </button>
         </div>
@@ -328,5 +362,33 @@ export function StickyNoteCard({
         </div>
       )}
     </div>
+  );
+}
+
+/* Small helper that swaps a Lucide icon (Pro) for an emoji glyph (Classic). */
+function ActionBtn({
+  proMode,
+  title,
+  onClick,
+  proIcon,
+  classicGlyph,
+}: {
+  proMode: boolean;
+  title: string;
+  onClick: () => void;
+  proIcon: React.ReactNode;
+  classicGlyph: string;
+}) {
+  return (
+    <button
+      className="icon-btn"
+      title={title}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+    >
+      {proMode ? proIcon : classicGlyph}
+    </button>
   );
 }

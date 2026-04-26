@@ -1,12 +1,21 @@
 import { useState } from 'react';
 import type { AppConfig, LayoutDirection, Provider, Theme } from '../types';
+import {
+  Key,
+  Sun,
+  Moon,
+  Bug,
+  Check,
+  Sparkles,
+} from 'lucide-react';
 
 interface Props {
   config: AppConfig;
   onSave: (c: AppConfig) => void;
+  proMode?: boolean;
 }
 
-export function ConfigPanel({ config, onSave }: Props) {
+export function ConfigPanel({ config, onSave, proMode = false }: Props) {
   const [draft, setDraft] = useState<AppConfig>(config);
   const [savedAt, setSavedAt] = useState<number | null>(null);
 
@@ -21,6 +30,22 @@ export function ConfigPanel({ config, onSave }: Props) {
     setSavedAt(Date.now());
   };
 
+  if (proMode) return renderPro({ draft, savedAt, update, updateKey, updateModel, save });
+  return renderClassic({ draft, savedAt, update, updateKey, updateModel, save });
+}
+
+/* ────────────────────────────── Classic ────────────────────────────── */
+
+interface RenderArgs {
+  draft: AppConfig;
+  savedAt: number | null;
+  update: (patch: Partial<AppConfig>) => void;
+  updateKey: (p: Provider, v: string) => void;
+  updateModel: (p: Provider, v: string) => void;
+  save: () => void;
+}
+
+function renderClassic({ draft, savedAt, update, updateKey, updateModel, save }: RenderArgs) {
   return (
     <div className="config-page">
       <div className="config-card">
@@ -153,7 +178,7 @@ export function ConfigPanel({ config, onSave }: Props) {
         </div>
 
         <div className="field">
-          <label>SaaS Mode</label>
+          <label>Professional Mode</label>
           <div className="toggle-row">
             <button
               className={'toggle-chip' + (draft.saasMode ? ' active' : '')}
@@ -162,7 +187,7 @@ export function ConfigPanel({ config, onSave }: Props) {
               {draft.saasMode ? 'On' : 'Off'}
             </button>
             <span className="toggle-help">
-              Switch to a clean, modern product UI — blue accents, card-style nodes, chat-bubble sidebar.
+              Clean, minimal interface — less sticky note, more SaaS.
             </span>
           </div>
         </div>
@@ -170,6 +195,211 @@ export function ConfigPanel({ config, onSave }: Props) {
         <div className="save-row">
           {savedAt && <span style={{ fontSize: 12, color: '#2a9d5c', alignSelf: 'center' }}>Saved</span>}
           <button className="btn-primary" onClick={save}>Save</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ────────────────────────────── Pro ────────────────────────────── */
+
+function ProToggle({
+  on,
+  onToggle,
+  label,
+}: {
+  on: boolean;
+  onToggle: () => void;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      aria-label={label}
+      className={'pro-toggle' + (on ? ' on' : '')}
+      onClick={onToggle}
+    >
+      <span className="pro-toggle-dot" />
+    </button>
+  );
+}
+
+function renderPro({ draft, savedAt, update, updateKey, updateModel, save }: RenderArgs) {
+  const provider = draft.provider;
+  const placeholder =
+    provider === 'deepseek' ? 'sk-...' : provider === 'openai' ? 'sk-...' : 'sk-ant-...';
+  const modelHint =
+    provider === 'deepseek'
+      ? 'deepseek-chat'
+      : provider === 'openai'
+      ? 'gpt-4o-mini'
+      : 'claude-sonnet-4-5';
+  const providerLabel =
+    provider === 'deepseek' ? 'DeepSeek' : provider === 'openai' ? 'OpenAI' : 'Anthropic (Claude)';
+
+  return (
+    <div className="config-page pro">
+      <div className="pro-config">
+        <h2 className="pro-config-title">Settings</h2>
+        <p className="pro-config-sub">Your keys stay in the browser — we never see them.</p>
+
+        {/* Provider section */}
+        <div className="pro-section">
+          <div className="pro-section-label">
+            <div className="pro-section-heading">Provider</div>
+            <div className="pro-section-desc">Choose which AI service to use for inference.</div>
+          </div>
+          <div className="pro-section-controls">
+            <div className="pro-pill-row">
+              {(['deepseek', 'openai', 'claude'] as Provider[]).map((p) => (
+                <button
+                  key={p}
+                  className={'pro-pill' + (provider === p ? ' active' : '')}
+                  onClick={() => update({ provider: p })}
+                >
+                  {p === 'deepseek' ? 'DeepSeek' : p === 'openai' ? 'OpenAI' : 'Claude'}
+                </button>
+              ))}
+            </div>
+            <div className="pro-field">
+              <label className="pro-field-label">
+                <Key size={12} /> {providerLabel} API key
+              </label>
+              <input
+                className="pro-input"
+                type="password"
+                value={draft.apiKeys[provider]}
+                onChange={(e) => updateKey(provider, e.target.value)}
+                placeholder={placeholder}
+              />
+            </div>
+            <div className="pro-field">
+              <label className="pro-field-label">Model</label>
+              <input
+                className="pro-input"
+                value={draft.model[provider]}
+                onChange={(e) => updateModel(provider, e.target.value)}
+                placeholder={modelHint}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="pro-divider" />
+
+        {/* Appearance section */}
+        <div className="pro-section">
+          <div className="pro-section-label">
+            <div className="pro-section-heading">Appearance</div>
+            <div className="pro-section-desc">Visual preferences and canvas layout.</div>
+          </div>
+          <div className="pro-section-controls">
+            <div className="pro-row">
+              <div>
+                <div className="pro-row-title">Theme</div>
+                <div className="pro-row-sub">Light or dark mode</div>
+              </div>
+              <div className="pro-segmented">
+                {(['light', 'dark'] as Theme[]).map((t) => (
+                  <button
+                    key={t}
+                    className={'pro-segment' + (draft.theme === t ? ' active' : '')}
+                    onClick={() => update({ theme: t })}
+                  >
+                    {t === 'light' ? <Sun size={13} /> : <Moon size={13} />}
+                    {t === 'light' ? 'Light' : 'Dark'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="pro-row">
+              <div>
+                <div className="pro-row-title">Layout direction</div>
+                <div className="pro-row-sub">How auto-arrange orders your nodes</div>
+              </div>
+              <select
+                className="pro-select"
+                value={draft.layoutDirection}
+                onChange={(e) => update({ layoutDirection: e.target.value as LayoutDirection })}
+              >
+                <option value="horizontal">Horizontal</option>
+                <option value="vertical">Vertical</option>
+              </select>
+            </div>
+
+            <div className="pro-row">
+              <div>
+                <div className="pro-row-title">Professional mode</div>
+                <div className="pro-row-sub">Clean, minimal interface — less sticky note, more SaaS.</div>
+              </div>
+              <ProToggle
+                on={draft.saasMode}
+                onToggle={() => update({ saasMode: !draft.saasMode })}
+                label="Professional mode"
+              />
+            </div>
+
+            <div className="pro-row">
+              <div>
+                <div className="pro-row-title">Settings as overlay</div>
+                <div className="pro-row-sub">Open Settings as a floating modal instead of a full-page tab.</div>
+              </div>
+              <ProToggle
+                on={draft.settingsAsOverlay}
+                onToggle={() => update({ settingsAsOverlay: !draft.settingsAsOverlay })}
+                label="Settings as overlay"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="pro-divider" />
+
+        {/* Advanced section */}
+        <div className="pro-section">
+          <div className="pro-section-label">
+            <div className="pro-section-heading">Advanced</div>
+            <div className="pro-section-desc">Options for power users and debugging.</div>
+          </div>
+          <div className="pro-section-controls">
+            <div className="pro-row">
+              <div>
+                <div className="pro-row-title">
+                  <Bug size={12} style={{ verticalAlign: -1, marginRight: 4 }} />
+                  Developer mode
+                </div>
+                <div className="pro-row-sub">Shows tool-call details on each node and in the sidebar.</div>
+              </div>
+              <ProToggle
+                on={draft.devMode}
+                onToggle={() => update({ devMode: !draft.devMode })}
+                label="Developer mode"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="pro-divider" />
+
+        {/* Save row */}
+        <div className="pro-section pro-save-section">
+          <div className="pro-section-label" />
+          <div className="pro-section-controls">
+            <div className="pro-save">
+              <button className="pro-btn-primary" onClick={save}>
+                <Sparkles size={14} style={{ display: 'none' }} />
+                Save changes
+              </button>
+              {savedAt && (
+                <span className="pro-saved">
+                  <Check size={14} /> Saved
+                </span>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>

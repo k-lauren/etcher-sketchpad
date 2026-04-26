@@ -127,6 +127,8 @@ input, textarea, select {
   display: flex;
   gap: 8px;
   z-index: 5;
+  /* Slide in lockstep with the sidebar (same duration & easing). */
+  transition: right 320ms cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 .toolbar-btn.tidy {
   background: #fff;
@@ -174,6 +176,8 @@ input, textarea, select {
   border: 1px solid #e5e3dc;
   border-radius: 8px;
   box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  /* Match the sidebar's slide-in. */
+  transition: right 320ms cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 .zoom-controls .zoom-readout {
   font-size: 12px;
@@ -1292,4 +1296,1109 @@ body.theme-dark .chat-msg.doc-card {
   color: #fff;
   border-color: rgba(255,255,255,0.18);
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   PROFESSIONAL MODE
+   Clean SaaS-style reskin. Activated by `body.mode-pro`.
+   Structural changes are JSX-conditional; everything else lives here.
+   See HANDOFF-professional-mode.md for the full spec.
+   ═══════════════════════════════════════════════════════════════ */
+
+@keyframes pro-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.spin { animation: pro-spin 1s linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .spin { animation: none; }
+}
+
+/* ───── Page background & base text ───── */
+body.mode-pro,
+body.mode-pro #root {
+  background: #FAFBFC;
+  color: #1F2328;
+}
+
+/* ───── Header ───── */
+body.mode-pro .header {
+  background: #FFFFFF;
+  border-bottom: 1px solid #E1E4E8;
+  height: 52px;
+  padding: 0 20px;
+  align-items: center;
+}
+body.mode-pro .logo {
+  font-size: 15px;
+  letter-spacing: -0.3px;
+  color: #1F2328;
+  gap: 10px;
+}
+body.mode-pro .logo .logo-sub {
+  font-weight: 400;
+  color: #8B949E;
+  margin-left: 4px;
+}
+
+body.mode-pro .tabs { gap: 2px; margin-left: 8px; }
+body.mode-pro .tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #656D76;
+  font-weight: 500;
+  border-radius: 6px;
+  padding: 6px 14px;
+}
+body.mode-pro .tab:hover { background: #F6F8FA; }
+body.mode-pro .tab.active {
+  background: #EFF6FF;
+  color: #2563EB;
+  font-weight: 600;
+}
+body.mode-pro .tab .tab-icon {
+  flex-shrink: 0;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+body.mode-pro .provider-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #8B949E;
+  background: #F6F8FA;
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid #ECEEF1;
+}
+body.mode-pro .provider-pill-name { font-weight: 500; }
+body.mode-pro .provider-pill-sep { color: #8B949E; }
+body.mode-pro .provider-pill-model {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 11px;
+}
+
+/* ───── Canvas surface ───── */
+body.mode-pro .canvas-wrap {
+  background:
+    radial-gradient(circle at 1px 1px, #E1E4E8 0.8px, transparent 0);
+  background-color: #FAFBFC;
+}
+
+/* Sidebar offset bumps from 380→420 in Pro */
+body.mode-pro .canvas-page.sidebar-open { --sb-w: 420px; }
+
+/* ───── Sticky notes (header bar + clean card) ───── */
+body.mode-pro .sticky {
+  width: 280px;
+  min-height: auto;
+  padding: 0;
+  gap: 0;
+  background: #FFFFFF;
+  border: 1.5px solid #E1E4E8;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  color: #1F2328;
+  font-size: 13px;
+  line-height: 1.5;
+  overflow: hidden;
+  transition: box-shadow 150ms ease, border-color 150ms ease;
+}
+body.mode-pro .sticky.child  { background: #F8FAFF; }
+body.mode-pro .sticky.doc    { background: #F0FDF4; }
+body.mode-pro .sticky.selected {
+  border-color: #2563EB;
+  box-shadow: 0 0 0 2px #2563EB, 0 1px 3px rgba(0,0,0,0.08);
+}
+body.mode-pro .sticky.drop-target {
+  box-shadow: 0 0 0 2px #16A34A, 0 1px 3px rgba(0,0,0,0.08);
+}
+
+body.mode-pro .sticky-header {
+  padding: 8px 12px;
+  border-bottom: 1px solid #ECEEF1;
+  background: transparent;
+  margin: 0;
+}
+body.mode-pro .sticky-chain-badge {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #8B949E;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+body.mode-pro .sticky-chain-badge .inline-icon { vertical-align: middle; }
+body.mode-pro .sticky-collapsed-count {
+  color: #8B949E;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 500;
+}
+
+/* Body sections inset 12px from card edges */
+body.mode-pro .sticky > :not(.sticky-header) {
+  margin-left: 12px;
+  margin-right: 12px;
+}
+body.mode-pro .sticky > .sticky-header + * { margin-top: 12px; }
+body.mode-pro .sticky > :last-child:not(.sticky-header) { margin-bottom: 12px; }
+body.mode-pro .sticky > * + *:not(.sticky-header) { margin-top: 8px; }
+
+body.mode-pro .sticky-q {
+  background: #F6F8FA;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-weight: 500;
+  color: #1F2328;
+}
+body.mode-pro .sticky.child .sticky-q { background: rgba(37, 99, 235, 0.04); }
+
+body.mode-pro .sticky-a {
+  background: transparent;
+  padding: 8px 10px;
+  color: #1F2328;
+  border-radius: 6px;
+  max-height: 140px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+body.mode-pro .sticky-a.empty { color: #8B949E; font-style: italic; font-size: 12px; }
+body.mode-pro .sticky-a-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #2563EB;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+body.mode-pro .sticky-input {
+  background: #FFFFFF;
+  border: 1px solid #E1E4E8;
+  border-radius: 6px;
+  padding: 8px 10px;
+  color: #1F2328;
+  font-size: 13px;
+  /* Body items get 12px lateral margins from the rule above; the base
+     width:100% would then overflow by 24px. Let the column-flex parent
+     stretch us to the available width instead. */
+  width: auto;
+}
+body.mode-pro .sticky-input:focus {
+  outline: none;
+  border-color: #2563EB;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+body.mode-pro .icon-btn {
+  color: #656D76;
+  border-radius: 6px;
+  padding: 6px;
+  background: transparent;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+body.mode-pro .icon-btn:hover { background: rgba(0,0,0,0.06); color: #1F2328; }
+
+body.mode-pro .btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #2563EB;
+  color: #fff;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  border: none;
+  transition: all 120ms ease;
+}
+body.mode-pro .btn-primary:hover:not(:disabled) { background: #1D4ED8; }
+body.mode-pro .btn-secondary {
+  background: #FFFFFF;
+  color: #1F2328;
+  border: 1px solid #E1E4E8;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  transition: all 120ms ease;
+}
+body.mode-pro .btn-secondary:hover { background: #F6F8FA; }
+
+body.mode-pro .sticky-error {
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  color: #DC2626;
+  border-radius: 6px;
+  font-size: 12px;
+  padding: 8px 10px;
+}
+
+body.mode-pro .sticky.doc .doc-title {
+  background: rgba(22, 163, 74, 0.08);
+  color: #1F2328;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 8px 10px;
+  border-radius: 6px;
+}
+body.mode-pro .sticky.doc .doc-hint {
+  color: #8B949E;
+  font-style: normal;
+  font-size: 11px;
+  text-align: left;
+}
+
+/* ───── Canvas toolbar (top-right pills) ───── */
+body.mode-pro .toolbar-btn {
+  width: auto;
+  height: auto;
+  border-radius: 20px;
+  padding: 8px 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  background: #2563EB;
+  color: #fff;
+  border: none;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  transition: all 120ms ease;
+}
+body.mode-pro .toolbar-btn:hover { background: #1D4ED8; }
+body.mode-pro .toolbar-btn.tidy {
+  background: #FFFFFF;
+  color: #1F2328;
+  border: 1px solid #E1E4E8;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+body.mode-pro .toolbar-btn.tidy:hover { background: #F6F8FA; }
+
+/* ───── Zoom controls ───── */
+body.mode-pro .zoom-controls {
+  background: #FFFFFF;
+  border: 1px solid #E1E4E8;
+  border-radius: 8px;
+  padding: 4px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  gap: 4px;
+}
+body.mode-pro .zoom-btn {
+  border: none;
+  background: transparent;
+  color: #656D76;
+  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+}
+body.mode-pro .zoom-btn:hover { background: #F6F8FA; color: #1F2328; }
+body.mode-pro .zoom-btn.small { width: auto; padding: 0 8px; }
+body.mode-pro .zoom-readout {
+  color: #656D76;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+body.mode-pro .zoom-divider {
+  display: inline-block;
+  width: 1px;
+  height: 20px;
+  background: #E1E4E8;
+  margin: 0 2px;
+}
+
+/* ───── Canvas hint ───── */
+body.mode-pro .canvas-hint {
+  background: #FFFFFF;
+  border: 1px solid #ECEEF1;
+  color: #8B949E;
+  border-radius: 6px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  padding: 8px 12px;
+  font-size: 12px;
+}
+
+/* ───── Sidebar (thread view) ───── */
+body.mode-pro .sidebar {
+  flex-basis: 420px;
+  width: 420px;
+  background: #FFFFFF;
+  border-left: 1px solid #E1E4E8;
+}
+/* Re-apply fullscreen sizing under a selector that out-specs `.sidebar`
+   above (0,2,1) so the Maximize2 button works in Pro mode. */
+body.mode-pro .sidebar.fullscreen {
+  flex: 0 0 100%;
+  width: 100%;
+  border-left: none;
+}
+body.mode-pro .sidebar-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid #ECEEF1;
+}
+body.mode-pro .sidebar-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  color: #1F2328;
+}
+body.mode-pro .sidebar-title-icon { color: #2563EB; flex-shrink: 0; }
+body.mode-pro .sidebar-msg-count {
+  font-size: 11px;
+  color: #8B949E;
+  background: #F6F8FA;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 500;
+}
+
+body.mode-pro .chat-log {
+  padding: 16px;
+  gap: 12px;
+}
+
+body.mode-pro .chat-empty {
+  color: #8B949E;
+  font-size: 13px;
+  margin-top: 60px;
+  line-height: 1.6;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+body.mode-pro .chat-empty-icon { color: #E1E4E8; }
+
+body.mode-pro .chat-msg-row {
+  display: flex;
+  margin: 4px 0;
+  gap: 10px;
+}
+body.mode-pro .chat-msg-row.user { justify-content: flex-end; }
+body.mode-pro .chat-msg-row.assistant { justify-content: flex-start; align-items: flex-start; }
+body.mode-pro .chat-bot-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2563EB, #7C3AED);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+body.mode-pro .chat-msg {
+  font-size: 13px;
+  line-height: 1.6;
+  padding: 10px 14px;
+  max-width: 85%;
+  white-space: pre-wrap;
+}
+body.mode-pro .chat-msg.user {
+  background: #2563EB;
+  color: #fff;
+  border-radius: 12px 12px 4px 12px;
+  align-self: flex-end;
+}
+body.mode-pro .chat-msg.assistant {
+  background: #F6F8FA;
+  color: #1F2328;
+  border-radius: 12px 12px 12px 4px;
+  align-self: flex-start;
+}
+body.mode-pro .chat-thinking {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #2563EB;
+  font-size: 12px;
+  font-weight: 500;
+}
+body.mode-pro .chat-meta { color: #8B949E; }
+body.mode-pro .chat-msg.doc-card {
+  background: #F0FDF4;
+  border: 1px solid #E1E4E8;
+  color: #1F2328;
+  border-radius: 8px;
+  font-weight: 600;
+  padding: 10px 14px;
+}
+body.mode-pro .chat-msg.doc-card:hover { background: #DCFCE7; }
+body.mode-pro .chat-msg.doc-card .doc-card-icon { color: #16A34A; }
+
+body.mode-pro .chat-composer {
+  border-top: 1px solid #ECEEF1;
+  padding: 12px 16px;
+  gap: 8px;
+}
+body.mode-pro .chat-composer textarea {
+  background: #FFFFFF;
+  border: 1px solid #E1E4E8;
+  border-radius: 8px;
+  color: #1F2328;
+  padding: 10px 12px;
+  font-size: 13px;
+  min-height: 42px;
+  max-height: 140px;
+  line-height: 1.5;
+}
+body.mode-pro .chat-composer textarea:focus {
+  outline: none;
+  border-color: #2563EB;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+body.mode-pro .chat-composer .btn-primary {
+  background: #2563EB;
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+body.mode-pro .chat-composer .btn-primary:disabled { opacity: 0.5; }
+
+/* ───── Settings: Pro two-column layout ───── */
+body.mode-pro .config-page.pro {
+  background: #FAFBFC;
+  padding: 40px 48px;
+  display: block;
+  align-items: stretch;
+}
+body.mode-pro .pro-config { max-width: 900px; }
+body.mode-pro .pro-config-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1F2328;
+  margin: 0 0 4px;
+}
+body.mode-pro .pro-config-sub {
+  font-size: 14px;
+  color: #656D76;
+  margin: 0 0 36px;
+  line-height: 1.5;
+}
+body.mode-pro .pro-section {
+  display: flex;
+  gap: 48px;
+  margin-bottom: 28px;
+}
+body.mode-pro .pro-section-label { flex: 0 0 180px; }
+body.mode-pro .pro-section-heading {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1F2328;
+}
+body.mode-pro .pro-section-desc {
+  font-size: 12px;
+  color: #8B949E;
+  margin-top: 4px;
+  line-height: 1.4;
+}
+body.mode-pro .pro-section-controls {
+  flex: 1;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+body.mode-pro .pro-divider {
+  height: 1px;
+  background: #ECEEF1;
+  margin: 0 0 28px 0;
+}
+
+/* Provider pill row */
+body.mode-pro .pro-pill-row { display: flex; gap: 6px; flex-wrap: wrap; }
+body.mode-pro .pro-pill {
+  padding: 7px 16px;
+  border-radius: 20px;
+  border: 1px solid #E1E4E8;
+  background: #FFFFFF;
+  color: #656D76;
+  font-size: 13px;
+  font-weight: 400;
+  font-family: inherit;
+  transition: all 120ms ease;
+}
+body.mode-pro .pro-pill:hover { background: #F6F8FA; border-color: #BFDBFE; }
+body.mode-pro .pro-pill.active {
+  background: #1F2328;
+  color: #fff;
+  border-color: #1F2328;
+  font-weight: 600;
+}
+
+/* Field with label + input */
+body.mode-pro .pro-field { display: flex; flex-direction: column; gap: 5px; }
+body.mode-pro .pro-field-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #656D76;
+}
+body.mode-pro .pro-input,
+body.mode-pro .pro-select {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid #E1E4E8;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  color: #1F2328;
+  background: #FFFFFF;
+  outline: none;
+  transition: border-color 120ms, box-shadow 120ms;
+}
+body.mode-pro .pro-input:focus,
+body.mode-pro .pro-select:focus {
+  border-color: #2563EB;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+body.mode-pro .pro-input::placeholder { color: #8B949E; }
+
+/* Settings rows: title + subtitle on the left, control on the right */
+body.mode-pro .pro-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+body.mode-pro .pro-row-title { font-size: 14px; color: #1F2328; font-weight: 500; }
+body.mode-pro .pro-row-sub { font-size: 12px; color: #8B949E; margin-top: 2px; }
+
+/* Segmented control (Theme) */
+body.mode-pro .pro-segmented {
+  display: inline-flex;
+  background: #F6F8FA;
+  border-radius: 8px;
+  padding: 3px;
+  border: 1px solid #ECEEF1;
+}
+body.mode-pro .pro-segment {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: #8B949E;
+  font-size: 12px;
+  font-weight: 400;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+body.mode-pro .pro-segment.active {
+  background: #FFFFFF;
+  color: #1F2328;
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+}
+
+/* Native select with custom chevron */
+body.mode-pro .pro-select {
+  padding: 6px 28px 6px 10px;
+  font-size: 13px;
+  appearance: none;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml;utf8,<svg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M1 1l4 4 4-4' stroke='%23656D76' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  width: auto;
+}
+
+/* iOS-style toggle switch */
+body.mode-pro .pro-toggle {
+  width: 40px;
+  height: 22px;
+  border-radius: 11px;
+  padding: 2px;
+  border: none;
+  cursor: pointer;
+  background: #D1D5DB;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  transition: background 200ms ease;
+}
+body.mode-pro .pro-toggle.on { background: #2563EB; }
+body.mode-pro .pro-toggle-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  transition: transform 200ms ease;
+  transform: translateX(0);
+}
+body.mode-pro .pro-toggle.on .pro-toggle-dot { transform: translateX(18px); }
+
+/* Save row */
+body.mode-pro .pro-save-section { margin-bottom: 0; }
+body.mode-pro .pro-save {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+body.mode-pro .pro-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #2563EB;
+  color: #fff;
+  border: none;
+  padding: 9px 20px;
+  font-size: 14px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+body.mode-pro .pro-btn-primary:hover { background: #1D4ED8; }
+body.mode-pro .pro-saved {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: #16A34A;
+  font-weight: 500;
+}
+
+/* Settings overlay (modal variant) — keep it light & rounded in Pro */
+body.mode-pro .settings-overlay-backdrop { background: rgba(15, 23, 42, 0.45); }
+body.mode-pro .settings-overlay-modal {
+  background: #FFFFFF;
+  border: 1px solid #E1E4E8;
+  border-radius: 16px;
+}
+body.mode-pro .settings-overlay-close { color: #656D76; }
+body.mode-pro .settings-overlay-close:hover { background: #F6F8FA; color: #1F2328; }
+
+/* Dev tool-call blocks */
+body.mode-pro .dev-toolcalls,
+body.mode-pro .chat-toolcalls {
+  background: #F6F8FA;
+  border: 1px solid #E1E4E8;
+  border-radius: 6px;
+}
+body.mode-pro .dev-toolcall {
+  background: #FFFFFF;
+  border-color: #E1E4E8;
+}
+body.mode-pro .dev-toolcall-name { color: #2563EB; }
+
+/* Doc viewer */
+body.mode-pro .doc-viewer-header {
+  background: #FFFFFF;
+  border-bottom-color: #E1E4E8;
+  color: #1F2328;
+}
+body.mode-pro .doc-viewer-body { background: #F6F8FA; }
+body.mode-pro .doc-viewer-icon,
+body.mode-pro .doc-card-icon { color: #16A34A; }
+body.mode-pro .doc-viewer-chevron { background: #F6F8FA; color: #1F2328; }
+body.mode-pro .doc-viewer-chevron:hover { background: #ECEEF1; }
+body.mode-pro .doc-edited-badge { background: #EFF6FF; color: #2563EB; }
+body.mode-pro .doc-expand-chevron {
+  background: #2563EB;
+  color: #fff;
+}
+body.mode-pro .doc-expand-chevron:hover { background: #1D4ED8; }
+
+/* Connection lines: dotted Bézier paths tuned for visibility on the
+   light Pro canvas. (Dark variant is in the Pro+Dark block below.) */
+body.mode-pro .connections .connection-link {
+  stroke: #94A3B8;
+  opacity: 0.95;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PRO + DARK
+   When Pro and Dark are both active, swap to a darker palette
+   that keeps the same structural rules.
+   ═══════════════════════════════════════════════════════════════ */
+/* Palette tuned to a Linear / GitHub-Dark style: deep black-blue base,
+   clean card surfaces, restrained borders, single blue accent. */
+body.mode-pro.theme-dark,
+body.mode-pro.theme-dark #root {
+  background: #0D1117;
+  color: #E6EDF3;
+}
+body.mode-pro.theme-dark .header {
+  background: #0F141B;
+  border-bottom-color: #21262D;
+}
+body.mode-pro.theme-dark .logo { color: #F0F6FC; }
+body.mode-pro.theme-dark .logo .logo-sub { color: #8B949E; }
+body.mode-pro.theme-dark .tab { color: #8B949E; }
+body.mode-pro.theme-dark .tab:hover { background: #161B22; }
+body.mode-pro.theme-dark .tab.active {
+  background: rgba(56, 139, 253, 0.15);
+  color: #58A6FF;
+}
+body.mode-pro.theme-dark .provider-pill {
+  background: #161B22;
+  border-color: #21262D;
+  color: #8B949E;
+}
+
+body.mode-pro.theme-dark .canvas-wrap {
+  background:
+    radial-gradient(circle at 1px 1px, #21262D 0.8px, transparent 0);
+  background-color: #0D1117;
+}
+
+/* Cards: subtle elevation. Root is the base surface; chained nodes get a
+   blue lift, doc nodes a richer emerald lift — both clearly tinted so
+   the type of node is readable at a glance. */
+body.mode-pro.theme-dark .sticky {
+  background: #161B22;
+  border-color: #30363D;
+  color: #E6EDF3;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+}
+body.mode-pro.theme-dark .sticky.child  { background: #15203B; border-color: #2A3A5C; }
+body.mode-pro.theme-dark .sticky.doc    { background: #1F1A38; border-color: #382E66; }
+body.mode-pro.theme-dark .sticky.selected {
+  border-color: #58A6FF;
+  box-shadow: 0 0 0 2px #58A6FF;
+}
+body.mode-pro.theme-dark .sticky-header { border-bottom-color: #21262D; }
+body.mode-pro.theme-dark .sticky.child  .sticky-header { border-bottom-color: #243456; }
+body.mode-pro.theme-dark .sticky.doc    .sticky-header { border-bottom-color: #2A2350; }
+body.mode-pro.theme-dark .sticky-chain-badge { color: #8B949E; }
+body.mode-pro.theme-dark .sticky.doc .sticky-chain-badge { color: #B0A5DB; }
+
+/* Question chip: warm slate so it reads as a real chip, not a faded gray.
+   Child variant uses a clearer blue tint that ties to the card lift. */
+body.mode-pro.theme-dark .sticky-q {
+  background: #1F2937;
+  color: #E6EDF3;
+}
+body.mode-pro.theme-dark .sticky.child .sticky-q {
+  background: rgba(88, 166, 255, 0.16);
+}
+
+/* Out-spec the (0,3,1) `body.theme-dark .sticky.child .sticky-a` rule
+   above so chained answers stop showing a pale-gray rectangle. */
+body.mode-pro.theme-dark .sticky-a,
+body.mode-pro.theme-dark .sticky.child .sticky-a,
+body.mode-pro.theme-dark .sticky.doc .sticky-a {
+  background: transparent;
+  color: #E6EDF3;
+}
+body.mode-pro.theme-dark .sticky-a.empty { color: #6E7681; }
+body.mode-pro.theme-dark .sticky-a-loading { color: #58A6FF; }
+body.mode-pro.theme-dark .sticky-input {
+  background: #0F1320;
+  border-color: #242A3D;
+  color: #E6E3D9;
+}
+body.mode-pro.theme-dark .sticky-input:focus {
+  border-color: #60A5FA;
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.18);
+}
+body.mode-pro.theme-dark .icon-btn { color: #9AA1B5; }
+body.mode-pro.theme-dark .icon-btn:hover { background: rgba(255,255,255,0.06); color: #E6E3D9; }
+body.mode-pro.theme-dark .btn-primary { background: #60A5FA; color: #0F1320; }
+body.mode-pro.theme-dark .btn-primary:hover:not(:disabled) { background: #93C5FD; }
+body.mode-pro.theme-dark .btn-secondary {
+  background: transparent;
+  border-color: #242A3D;
+  color: #E6E3D9;
+}
+body.mode-pro.theme-dark .btn-secondary:hover { background: #1E2336; }
+
+body.mode-pro.theme-dark .toolbar-btn { background: #60A5FA; color: #0F1320; }
+body.mode-pro.theme-dark .toolbar-btn:hover { background: #93C5FD; }
+body.mode-pro.theme-dark .toolbar-btn.tidy {
+  background: #1A1F33;
+  color: #E6E3D9;
+  border-color: #242A3D;
+}
+body.mode-pro.theme-dark .toolbar-btn.tidy:hover { background: #232942; }
+
+body.mode-pro.theme-dark .zoom-controls {
+  background: #161A2A;
+  border-color: #242A3D;
+}
+body.mode-pro.theme-dark .zoom-btn { color: #9AA1B5; }
+body.mode-pro.theme-dark .zoom-btn:hover { background: #232942; color: #E6E3D9; }
+body.mode-pro.theme-dark .zoom-readout { color: #9AA1B5; }
+body.mode-pro.theme-dark .zoom-divider { background: #242A3D; }
+
+body.mode-pro.theme-dark .canvas-hint {
+  background: #161A2A;
+  border-color: #242A3D;
+  color: #8A91A6;
+}
+
+body.mode-pro.theme-dark .sidebar {
+  background: #161A2A;
+  border-left-color: #242A3D;
+}
+body.mode-pro.theme-dark .sidebar-header { border-bottom-color: #242A3D; }
+body.mode-pro.theme-dark .sidebar-title { color: #F3EFE4; }
+body.mode-pro.theme-dark .sidebar-msg-count {
+  background: rgba(255,255,255,0.06);
+  color: #8A91A6;
+}
+body.mode-pro.theme-dark .chat-msg.user {
+  background: #60A5FA;
+  color: #0F1320;
+}
+body.mode-pro.theme-dark .chat-msg.assistant {
+  background: #1F2438;
+  color: #E6E3D9;
+}
+body.mode-pro.theme-dark .chat-thinking { color: #60A5FA; }
+body.mode-pro.theme-dark .chat-empty { color: #8A91A6; }
+body.mode-pro.theme-dark .chat-empty-icon { color: #242A3D; }
+body.mode-pro.theme-dark .chat-composer { border-top-color: #242A3D; }
+body.mode-pro.theme-dark .chat-composer textarea {
+  background: #1A1F33;
+  border-color: #242A3D;
+  color: #E6E3D9;
+}
+body.mode-pro.theme-dark .chat-composer .btn-primary {
+  background: #60A5FA;
+  color: #0F1320;
+}
+
+body.mode-pro.theme-dark .config-page.pro { background: #0F1320; }
+body.mode-pro.theme-dark .pro-config-title { color: #F3EFE4; }
+body.mode-pro.theme-dark .pro-config-sub,
+body.mode-pro.theme-dark .pro-row-sub,
+body.mode-pro.theme-dark .pro-section-desc { color: #8A91A6; }
+body.mode-pro.theme-dark .pro-section-heading,
+body.mode-pro.theme-dark .pro-row-title { color: #F3EFE4; }
+body.mode-pro.theme-dark .pro-divider { background: #242A3D; }
+body.mode-pro.theme-dark .pro-input,
+body.mode-pro.theme-dark .pro-select {
+  background: #1A1F33;
+  border-color: #242A3D;
+  color: #E6E3D9;
+}
+body.mode-pro.theme-dark .pro-input:focus,
+body.mode-pro.theme-dark .pro-select:focus {
+  border-color: #60A5FA;
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.18);
+}
+body.mode-pro.theme-dark .pro-pill {
+  background: #1A1F33;
+  border-color: #242A3D;
+  color: #9AA1B5;
+}
+body.mode-pro.theme-dark .pro-pill:hover { background: #232942; }
+body.mode-pro.theme-dark .pro-pill.active {
+  background: #F3EFE4;
+  color: #0F1320;
+  border-color: #F3EFE4;
+}
+body.mode-pro.theme-dark .pro-segmented {
+  background: #0F1320;
+  border-color: #242A3D;
+}
+body.mode-pro.theme-dark .pro-segment { color: #8A91A6; }
+body.mode-pro.theme-dark .pro-segment.active {
+  background: #1A1F33;
+  color: #F3EFE4;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+body.mode-pro.theme-dark .pro-toggle { background: #3A3F52; }
+body.mode-pro.theme-dark .pro-toggle.on { background: #60A5FA; }
+body.mode-pro.theme-dark .pro-btn-primary { background: #60A5FA; color: #0F1320; }
+body.mode-pro.theme-dark .pro-btn-primary:hover { background: #93C5FD; }
+body.mode-pro.theme-dark .pro-saved { color: #4ADE80; }
+
+body.mode-pro.theme-dark .settings-overlay-modal {
+  background: #161A2A;
+  border-color: #242A3D;
+}
+body.mode-pro.theme-dark .settings-overlay-close { color: #9AA1B5; }
+body.mode-pro.theme-dark .settings-overlay-close:hover { background: rgba(255,255,255,0.06); color: #E6E3D9; }
+body.mode-pro.theme-dark .settings-overlay-backdrop { background: rgba(2, 4, 12, 0.62); }
+
+/* Connection lines in Pro+Dark — lighter slate for contrast. */
+body.mode-pro.theme-dark .connections .connection-link {
+  stroke: #64748B;
+  opacity: 0.9;
+}
+
+/* Sticky error panel */
+body.mode-pro.theme-dark .sticky-error {
+  background: #3A1A1F;
+  border-color: #8A3441;
+  color: #F4A7B1;
+}
+
+/* Document sticky body — violet-tinted title chip so the doc identity reads
+   intentionally alongside the blue-purple logo gradient. */
+body.mode-pro.theme-dark .sticky.doc .doc-title {
+  background: rgba(167, 139, 250, 0.22);
+  color: #ECE6FB;
+  font-weight: 600;
+}
+body.mode-pro.theme-dark .sticky.doc .doc-hint { color: #9989C4; }
+
+/* ───── Doc-color preview themes ─────
+   Toggle one of these classes on <body> to preview the alternative.
+   Same scope as the default rules above so they fully override. */
+
+/* Option A — Amber (manuscript/parchment vibe) */
+body.mode-pro.theme-dark.doc-amber .sticky.doc {
+  background: #2A2515;
+  border-color: #4A3F22;
+}
+body.mode-pro.theme-dark.doc-amber .sticky.doc .sticky-header { border-bottom-color: #3D341F; }
+body.mode-pro.theme-dark.doc-amber .sticky.doc .sticky-chain-badge { color: #C9A36B; }
+body.mode-pro.theme-dark.doc-amber .sticky.doc .doc-title {
+  background: rgba(251, 191, 36, 0.20);
+  color: #F5E9CB;
+}
+body.mode-pro.theme-dark.doc-amber .sticky.doc .doc-hint { color: #B59765; }
+body.mode-pro.theme-dark.doc-amber .chat-msg.doc-card {
+  background: #2A2515; border-color: #4A3F22; color: #F5E9CB;
+}
+body.mode-pro.theme-dark.doc-amber .chat-msg.doc-card .doc-card-icon { color: #FBBF24; }
+
+/* Option B — Indigo / Violet (sits next to blue chained, more refined) */
+body.mode-pro.theme-dark.doc-violet .sticky.doc {
+  background: #1F1A38;
+  border-color: #382E66;
+}
+body.mode-pro.theme-dark.doc-violet .sticky.doc .sticky-header { border-bottom-color: #2A2350; }
+body.mode-pro.theme-dark.doc-violet .sticky.doc .sticky-chain-badge { color: #B0A5DB; }
+body.mode-pro.theme-dark.doc-violet .sticky.doc .doc-title {
+  background: rgba(167, 139, 250, 0.22);
+  color: #ECE6FB;
+}
+body.mode-pro.theme-dark.doc-violet .sticky.doc .doc-hint { color: #9989C4; }
+body.mode-pro.theme-dark.doc-violet .chat-msg.doc-card {
+  background: #1F1A38; border-color: #382E66; color: #ECE6FB;
+}
+body.mode-pro.theme-dark.doc-violet .chat-msg.doc-card .doc-card-icon { color: #A78BFA; }
+
+/* Option C — Teal / Cyan (cooler kin to emerald, distinctive in the palette) */
+body.mode-pro.theme-dark.doc-teal .sticky.doc {
+  background: #0F2A30;
+  border-color: #1F4951;
+}
+body.mode-pro.theme-dark.doc-teal .sticky.doc .sticky-header { border-bottom-color: #1A3D44; }
+body.mode-pro.theme-dark.doc-teal .sticky.doc .sticky-chain-badge { color: #79B5BF; }
+body.mode-pro.theme-dark.doc-teal .sticky.doc .doc-title {
+  background: rgba(56, 189, 248, 0.18);
+  color: #DBF1F6;
+}
+body.mode-pro.theme-dark.doc-teal .sticky.doc .doc-hint { color: #76A6AF; }
+body.mode-pro.theme-dark.doc-teal .chat-msg.doc-card {
+  background: #0F2A30; border-color: #1F4951; color: #DBF1F6;
+}
+body.mode-pro.theme-dark.doc-teal .chat-msg.doc-card .doc-card-icon { color: #38BDF8; }
+
+/* Option D — Slate (neutral, most restrained — closest to the card surface) */
+body.mode-pro.theme-dark.doc-slate .sticky.doc {
+  background: #1C2230;
+  border-color: #323D52;
+}
+body.mode-pro.theme-dark.doc-slate .sticky.doc .sticky-header { border-bottom-color: #2A3245; }
+body.mode-pro.theme-dark.doc-slate .sticky.doc .sticky-chain-badge { color: #9AA5B7; }
+body.mode-pro.theme-dark.doc-slate .sticky.doc .doc-title {
+  background: rgba(203, 213, 225, 0.10);
+  color: #E6EDF3;
+}
+body.mode-pro.theme-dark.doc-slate .sticky.doc .doc-hint { color: #8895A8; }
+body.mode-pro.theme-dark.doc-slate .chat-msg.doc-card {
+  background: #1C2230; border-color: #323D52; color: #E6EDF3;
+}
+body.mode-pro.theme-dark.doc-slate .chat-msg.doc-card .doc-card-icon { color: #CBD5E1; }
+
+/* Document card in chat — same violet lift as the doc sticky. */
+body.mode-pro.theme-dark .chat-msg.doc-card {
+  background: #1F1A38;
+  border-color: #382E66;
+  color: #ECE6FB;
+}
+body.mode-pro.theme-dark .chat-msg.doc-card:hover { background: #261F45; }
+body.mode-pro.theme-dark .chat-msg.doc-card .doc-card-icon { color: #A78BFA; }
+
+/* Dev tool-call blocks — were inheriting the light Pro values. */
+body.mode-pro.theme-dark .dev-toolcalls,
+body.mode-pro.theme-dark .chat-toolcalls {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+body.mode-pro.theme-dark .dev-toolcalls-title,
+body.mode-pro.theme-dark .dev-toolcall-label {
+  color: #9AA1B5;
+}
+body.mode-pro.theme-dark .dev-toolcall {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.10);
+}
+body.mode-pro.theme-dark .dev-toolcall-name { color: #93C5FD; }
+body.mode-pro.theme-dark .dev-toolcall-iter { color: #8A91A6; }
+body.mode-pro.theme-dark .dev-toolcall-body {
+  background: rgba(0, 0, 0, 0.35);
+  color: #E6E3D9;
+}
+body.mode-pro.theme-dark .dev-toolcall summary::-webkit-details-marker { color: #9AA1B5; }
+
+/* Markdown content rendered inside chat bubbles & sticky answers */
+body.mode-pro.theme-dark .markdown-body a { color: #93C5FD; }
+body.mode-pro.theme-dark .markdown-body code,
+body.mode-pro.theme-dark .markdown-body pre {
+  background: rgba(255,255,255,0.08);
+  color: #E6E3D9;
+}
+body.mode-pro.theme-dark .markdown-body blockquote {
+  border-left-color: rgba(255,255,255,0.25);
+  color: #B7BCD0;
+}
+body.mode-pro.theme-dark .markdown-body hr { border-top-color: rgba(255,255,255,0.18); }
+body.mode-pro.theme-dark .markdown-body th,
+body.mode-pro.theme-dark .markdown-body td { border-color: rgba(255,255,255,0.18); }
+body.mode-pro.theme-dark .markdown-body th { background: rgba(255,255,255,0.06); }
+
+/* Footer buttons inside the sticky */
+body.mode-pro.theme-dark .sticky-footer .btn-secondary {
+  background: transparent;
+  color: #E6E3D9;
+  border-color: #242A3D;
+}
+body.mode-pro.theme-dark .sticky-footer .btn-secondary:hover {
+  background: rgba(255,255,255,0.06);
+}
+
+/* Doc viewer */
+body.mode-pro.theme-dark .doc-viewer-header {
+  background: #141829;
+  border-bottom-color: rgba(255,255,255,0.12);
+  color: #E6E3D9;
+}
+body.mode-pro.theme-dark .doc-viewer-body { background: #0A0D1A; }
+body.mode-pro.theme-dark .doc-viewer-icon,
+body.mode-pro.theme-dark .doc-card-icon { color: #4ADE80; }
+body.mode-pro.theme-dark .doc-viewer-chevron {
+  background: rgba(255,255,255,0.08);
+  color: #E6E3D9;
+}
+body.mode-pro.theme-dark .doc-viewer-chevron:hover { background: rgba(255,255,255,0.16); }
+body.mode-pro.theme-dark .doc-edited-badge {
+  background: rgba(96, 165, 250, 0.15);
+  color: #60A5FA;
+}
+body.mode-pro.theme-dark .doc-expand-chevron {
+  background: #60A5FA;
+  color: #0F1320;
+}
+body.mode-pro.theme-dark .doc-expand-chevron:hover { background: #93C5FD; }
 

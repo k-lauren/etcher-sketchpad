@@ -2,6 +2,17 @@ import { useMemo, useState } from 'react';
 import type { StickyNote } from '../types';
 import { Markdown } from './Markdown';
 import { DocIcon } from './icons';
+import {
+  MessageSquare,
+  Maximize2,
+  Minimize2,
+  X as XIcon,
+  Eye,
+  FileText,
+  Bot,
+  Loader2,
+  Send,
+} from 'lucide-react';
 
 interface Props {
   notes: StickyNote[];
@@ -10,6 +21,7 @@ interface Props {
   onSend: (parentId: string, question: string) => void;
   sending: boolean;
   devMode: boolean;
+  proMode?: boolean;
   fullscreen: boolean;
   onToggleFullscreen: () => void;
   onOpenDocument: (noteId: string) => void;
@@ -22,6 +34,7 @@ export function Sidebar({
   onSend,
   sending,
   devMode,
+  proMode = false,
   fullscreen,
   onToggleFullscreen,
   onOpenDocument,
@@ -51,20 +64,40 @@ export function Sidebar({
     onSend(activeId, q);
   };
 
+  const messageCount = chain.filter((n) => n.kind !== 'document').length;
+
   return (
-    <div className={'sidebar' + (fullscreen ? ' fullscreen' : '')}>
+    <div className={'sidebar' + (proMode ? ' pro' : '') + (fullscreen ? ' fullscreen' : '')}>
       <div className="sidebar-header">
-        <div className="sidebar-title">Chain as chat</div>
+        <div className="sidebar-title">
+          {proMode && <MessageSquare size={15} className="sidebar-title-icon" />}
+          {proMode ? 'Thread view' : 'Chain as chat'}
+          {proMode && (
+            <span className="sidebar-msg-count">
+              {messageCount} {messageCount === 1 ? 'message' : 'messages'}
+            </span>
+          )}
+        </div>
         <div style={{ display: 'flex', gap: 4 }}>
           <button
             className="icon-btn"
             onClick={onToggleFullscreen}
             title={fullscreen ? 'Exit fullscreen' : 'Fullscreen chat'}
           >
-            {fullscreen ? '⤡' : '⤢'}
+            {proMode ? (
+              fullscreen ? (
+                <Minimize2 size={15} />
+              ) : (
+                <Maximize2 size={15} />
+              )
+            ) : fullscreen ? (
+              '⤡'
+            ) : (
+              '⤢'
+            )}
           </button>
           <button className="icon-btn" onClick={onClose} title="Close">
-            ✕
+            {proMode ? <XIcon size={15} /> : '✕'}
           </button>
         </div>
       </div>
@@ -72,7 +105,14 @@ export function Sidebar({
       <div className="chat-log">
         {chain.length === 0 ? (
           <div className="chat-empty">
-            Double-click a sticky note on the canvas, or click 🔍, to view it here.
+            {proMode ? (
+              <>
+                <Eye size={28} className="chat-empty-icon" />
+                <div>Select a node on the canvas to view its conversation thread here.</div>
+              </>
+            ) : (
+              <>Double-click a sticky note on the canvas, or click 🔍, to view it here.</>
+            )}
           </div>
         ) : (
           chain.map((n) => (
@@ -84,14 +124,18 @@ export function Sidebar({
                   onClick={() => onOpenDocument(n.id)}
                   title="Open document"
                 >
-                  <DocIcon size={16} className="doc-card-icon" />
+                  {proMode ? (
+                    <FileText size={16} className="doc-card-icon" />
+                  ) : (
+                    <DocIcon size={16} className="doc-card-icon" />
+                  )}
                   <span className="doc-card-title">{n.document.title}</span>
                 </button>
               )}
               {n.kind !== 'document' && n.question && (
-                <>
+                <div className="chat-msg-row user">
                   <div className="chat-msg user">{n.question}</div>
-                </>
+                </div>
               )}
               {devMode && n.toolCalls && n.toolCalls.length > 0 && (
                 <div className="chat-toolcalls">
@@ -119,13 +163,33 @@ export function Sidebar({
                 </div>
               )}
               {(n.answer || n.loading) && (
-                <>
+                <div className="chat-msg-row assistant">
+                  {proMode && (
+                    <span className="chat-bot-avatar" aria-hidden="true">
+                      <Bot size={14} color="#fff" />
+                    </span>
+                  )}
                   <div className="chat-msg assistant">
-                    {n.loading ? 'Thinking…' : <Markdown>{n.answer}</Markdown>}
+                    {n.loading ? (
+                      proMode ? (
+                        <span className="chat-thinking">
+                          <Loader2 size={14} className="spin" />
+                          Thinking...
+                        </span>
+                      ) : (
+                        'Thinking…'
+                      )
+                    ) : (
+                      <Markdown>{n.answer}</Markdown>
+                    )}
                   </div>
-                </>
+                </div>
               )}
-              {n.error && <div className="chat-msg assistant" style={{ color: '#b00020' }}>Error: {n.error}</div>}
+              {n.error && (
+                <div className="chat-msg assistant" style={{ color: '#b00020' }}>
+                  Error: {n.error}
+                </div>
+              )}
             </div>
           ))
         )}
@@ -134,7 +198,7 @@ export function Sidebar({
       {activeId && (
         <div className="chat-composer">
           <textarea
-            placeholder="Continue the chain..."
+            placeholder={proMode ? 'Continue the thread...' : 'Continue the chain...'}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {
@@ -144,8 +208,13 @@ export function Sidebar({
               }
             }}
           />
-          <button className="btn-primary" disabled={!draft.trim() || sending} onClick={send}>
-            Send
+          <button
+            className="btn-primary"
+            disabled={!draft.trim() || sending}
+            onClick={send}
+            title={proMode ? 'Send' : undefined}
+          >
+            {proMode ? <Send size={14} /> : 'Send'}
           </button>
         </div>
       )}
