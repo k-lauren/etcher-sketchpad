@@ -56,9 +56,28 @@ export interface AppConfig {
   devMode: boolean;
   settingsAsOverlay: boolean;
   saasMode: boolean;
+  /** When true, opening a chat in the sidebar opens it in fullscreen
+   *  thread view by default. Toggled from the pin button in the
+   *  fullscreen thread header. */
+  threadFullscreenDefault: boolean;
 }
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
+}
+
+/** A single canvas: an isolated workspace of notes + viewport. The user
+ *  can have many canvases and switch between them via the canvas-switcher
+ *  in the top-left of the canvas area. */
+export interface CanvasDoc {
+  id: string;
+  name: string;
+  notes: StickyNote[];
+  transform: CanvasTransform;
+}
+
+export interface CanvasesState {
+  canvases: CanvasDoc[];
+  activeId: string;
 }

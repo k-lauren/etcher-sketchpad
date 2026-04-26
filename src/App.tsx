@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { AppConfig, CanvasTransform, ChatMessage, DocumentPayload, StickyNote } from './types';
-import { defaultConfig, loadConfig, loadNotes, saveConfig, saveNotes, uid } from './storage';
+import type { AppConfig, CanvasesState, CanvasTransform, ChatMessage, DocumentPayload, StickyNote } from './types';
+import { loadCanvases, loadConfig, saveCanvases, saveConfig, uid } from './storage';
 import { infer } from './api';
 import { Canvas } from './components/Canvas';
 import { Sidebar } from './components/Sidebar';
 import { ConfigPanel } from './components/ConfigPanel';
 import { DocViewer, type DocViewerEntry } from './components/DocViewer';
+import { CanvasSwitcher } from './components/CanvasSwitcher';
 import { autoLayout } from './layout';
 import { LayoutGrid, Settings as SettingsIcon, Cpu } from 'lucide-react';
 import { ProLogo } from './components/ProLogo';
@@ -15,24 +16,106 @@ type Tab = 'canvas' | 'config';
 export default function App() {
   const [tab, setTab] = useState<Tab>('canvas');
   const [config, setConfig] = useState<AppConfig>(() => loadConfig());
-  const [notes, setNotes] = useState<StickyNote[]>(() => {
-    const n = loadNotes();
-    if (n.length > 0) return n;
-    return [
-      { id: uid(), x: 120, y: 120, question: '', answer: '', parentId: null },
-    ];
-  });
+  const [canvasesState, setCanvasesState] = useState<CanvasesState>(() => loadCanvases());
+  // Derived: the active canvas + its notes/transform.
+  const activeCanvas =
+    canvasesState.canvases.find((c) => c.id === canvasesState.activeId) ??
+    canvasesState.canvases[0];
+  const notes = activeCanvas.notes;
+  const canvasTransform = activeCanvas.transform;
+
+  // Adapter that mimics React's setState API but writes back into the
+  // active canvas's notes — every existing call site keeps working unchanged.
+  const setNotes = (
+    updater: StickyNote[] | ((prev: StickyNote[]) => StickyNote[])
+  ) => {
+    setCanvasesState((prev) => ({
+      ...prev,
+      canvases: prev.canvases.map((c) =>
+        c.id !== prev.activeId
+          ? c
+          : {
+              ...c,
+              notes:
+                typeof updater === 'function'
+                  ? (updater as (p: StickyNote[]) => StickyNote[])(c.notes)
+                  : updater,
+            }
+      ),
+    }));
+  };
+
+  const setCanvasTransform = (t: CanvasTransform) => {
+    setCanvasesState((prev) => ({
+      ...prev,
+      canvases: prev.canvases.map((c) =>
+        c.id !== prev.activeId ? c : { ...c, transform: t }
+      ),
+    }));
+  };
+
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [sidebarId, setSidebarId] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [docPreview, setDocPreview] = useState<{ noteId: string; open: boolean } | null>(null);
   const [docViewerEntry, setDocViewerEntry] = useState<DocViewerEntry>('default');
   const [sidebarFullscreen, setSidebarFullscreen] = useState(false);
-  const [canvasTransform, setCanvasTransform] = useState<CanvasTransform>({ x: 0, y: 0, scale: 1 });
   const [configOverlayOpen, setConfigOverlayOpen] = useState(false);
   const measureRef = useRef<(() => Map<string, { w: number; h: number }>) | null>(null);
 
-  useEffect(() => { saveNotes(notes); }, [notes]);
+  /* ─── Canvas-switch helpers ─── */
+  const resetPerCanvasUI = () => {
+    setSelectedId(null);
+    setSidebarId(null);
+    setDocPreview(null);
+    setSidebarFullscreen(false);
+  };
+  const addCanvas = () => {
+    // Find the smallest "Canvas N" name not already in use.
+    const existingNumbers = canvasesState.canvases.map((c) => {
+      const m = c.name.match(/^Canvas (\d+)$/);
+      return m ? parseInt(m[1], 10) : 0;
+    });
+    const nextNumber = Math.max(0, ...existingNumbers) + 1;
+    const id = uid();
+    setCanvasesState((prev) => ({
+      canvases: [
+        ...prev.canvases,
+        {
+          id,
+          name: `Canvas ${nextNumber}`,
+          notes: [{ id: uid(), x: 120, y: 120, question: '', answer: '', parentId: null }],
+          transform: { x: 0, y: 0, scale: 1 },
+        },
+      ],
+      activeId: id,
+    }));
+    resetPerCanvasUI();
+  };
+  const switchCanvas = (id: string) => {
+    if (id === canvasesState.activeId) return;
+    setCanvasesState((prev) => ({ ...prev, activeId: id }));
+    resetPerCanvasUI();
+  };
+  const renameCanvas = (id: string, name: string) => {
+    setCanvasesState((prev) => ({
+      ...prev,
+      canvases: prev.canvases.map((c) => (c.id === id ? { ...c, name } : c)),
+    }));
+  };
+  const deleteCanvas = (id: string) => {
+    if (canvasesState.canvases.length <= 1) return;
+    setCanvasesState((prev) => {
+      const remaining = prev.canvases.filter((c) => c.id !== id);
+      return {
+        canvases: remaining,
+        activeId: prev.activeId === id ? remaining[0].id : prev.activeId,
+      };
+    });
+    if (canvasesState.activeId === id) resetPerCanvasUI();
+  };
+
+  useEffect(() => { saveCanvases(canvasesState); }, [canvasesState]);
   useEffect(() => { saveConfig(config); }, [config]);
   useEffect(() => {
     document.body.classList.toggle('theme-dark', config.theme === 'dark');
@@ -345,6 +428,13 @@ export default function App() {
     } else if (docPreview) {
       setDocPreview(null);
     }
+    // Honor the "open threads in fullscreen by default" pref. Only opt
+    // in on freshly-opened sidebars — if the user is already navigating
+    // a non-fullscreen sidebar, leave it alone so they don't fight the
+    // window-mode they explicitly chose this session.
+    if (config.saasMode && config.threadFullscreenDefault && n?.kind !== 'document' && !sidebarId) {
+      setSidebarFullscreen(true);
+    }
   };
 
   const toggleCollapse = (id: string) =>
@@ -425,7 +515,18 @@ export default function App() {
 
       {tab === 'canvas' ? (
         <div className={'canvas-page' + (sidebarId ? ' sidebar-open' : '')}>
+          <div className="canvas-switcher-anchor" onPointerDown={(e) => e.stopPropagation()}>
+            <CanvasSwitcher
+              canvases={canvasesState.canvases.map((c) => ({ id: c.id, name: c.name }))}
+              activeId={canvasesState.activeId}
+              onSwitch={switchCanvas}
+              onCreate={addCanvas}
+              onRename={renameCanvas}
+              onDelete={canvasesState.canvases.length > 1 ? deleteCanvas : undefined}
+            />
+          </div>
           <Canvas
+            key={canvasesState.activeId}
             notes={notes}
             selectedId={selectedId}
             onSelect={setSelectedId}
@@ -527,6 +628,11 @@ export default function App() {
               proMode={proMode}
               fullscreen={sidebarFullscreen}
               onToggleFullscreen={() => setSidebarFullscreen((v) => !v)}
+              onSelectChat={openChain}
+              fullscreenDefault={config.threadFullscreenDefault}
+              onToggleFullscreenDefault={() =>
+                setConfig({ ...config, threadFullscreenDefault: !config.threadFullscreenDefault })
+              }
               onOpenDocument={(noteId) => {
                 setDocViewerEntry(sidebarFullscreen ? 'from-fullscreen' : 'default');
                 setDocPreview({ noteId, open: true });
