@@ -2372,7 +2372,9 @@ body.mode-pro.theme-dark .sticky-header { border-bottom-color: #21262D; }
 body.mode-pro.theme-dark .sticky.child  .sticky-header { border-bottom-color: #243456; }
 body.mode-pro.theme-dark .sticky.doc    .sticky-header { border-bottom-color: #2A2350; }
 body.mode-pro.theme-dark .sticky-chain-badge { color: #8B949E; }
+body.mode-pro.theme-dark .sticky.child .sticky-chain-badge { color: #8B949E; }
 body.mode-pro.theme-dark .sticky-chain-badge .inline-icon { stroke: #8B949E; color: #8B949E; }
+body.mode-pro.theme-dark .sticky.child .sticky-chain-badge .inline-icon { stroke: #8B949E; color: #8B949E; }
 body.mode-pro.theme-dark .sticky.doc .sticky-chain-badge { color: #B0A5DB; }
 body.mode-pro.theme-dark .sticky.doc .sticky-chain-badge .inline-icon { stroke: #B0A5DB; color: #B0A5DB; }
 

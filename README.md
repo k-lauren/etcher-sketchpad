@@ -14,6 +14,19 @@ Context for inference is built by bolting together draggable sticky notes (Q&A p
   </tr>
 </table>
 
+### Pro Interface
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/ProLightModeScrCp.png" alt="Etcher-Sketchpad Pro in light mode" /></td>
+    <td width="50%"><img src="docs/ProDarkModeScrCp.png" alt="Etcher-Sketchpad Pro in dark mode" /></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><i>Pro light mode — refined interface with document and chain visualization.</i></sub></td>
+    <td align="center"><sub><i>Pro dark mode — pro interface with enhanced dark theme.</i></sub></td>
+  </tr>
+</table>
+
 ## Features
 
 - **Canvas tab** — a dotted infinite feel canvas with draggable sticky notes. Each note
