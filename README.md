@@ -3,7 +3,7 @@
 A canvas-based AI interaction UI inspired by sticky notes on a pin-up board.
 Context for inference is built by bolting together draggable sticky notes (Q&A pairs) into chains.
 
-### Pro Interface — Newly Roled Out!
+### Pro Interface — Newly Rolled Out!
 
 <table>
   <tr>
