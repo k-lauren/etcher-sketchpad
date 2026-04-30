@@ -78,7 +78,7 @@ async function runOpenAICompatibleLoop(
   const model =
     provider === 'openai'
       ? config.model.openai || 'gpt-4o-mini'
-      : config.model.deepseek || 'deepseek-chat';
+      : config.model.deepseek || 'deepseek-v4-pro';
 
   const wire: Record<string, unknown>[] = [
     { role: 'system', content: SYSTEM_PROMPT },

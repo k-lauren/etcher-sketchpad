@@ -83,7 +83,7 @@ function renderClassic({ draft, savedAt, update, updateKey, updateModel, save }:
           <input
             value={draft.model.deepseek}
             onChange={(e) => updateModel('deepseek', e.target.value)}
-            placeholder="deepseek-chat"
+            placeholder="deepseek-v4-pro"
           />
         </div>
 
@@ -232,7 +232,7 @@ function renderPro({ draft, savedAt, update, updateKey, updateModel, save }: Ren
     provider === 'deepseek' ? 'sk-...' : provider === 'openai' ? 'sk-...' : 'sk-ant-...';
   const modelHint =
     provider === 'deepseek'
-      ? 'deepseek-chat'
+      ? 'deepseek-v4-pro'
       : provider === 'openai'
       ? 'gpt-4o-mini'
       : 'claude-sonnet-4-5';

@@ -14,7 +14,7 @@ export const defaultConfig: AppConfig = {
     claude: '',
   },
   model: {
-    deepseek: 'deepseek-chat',
+    deepseek: 'deepseek-v4-pro',
     openai: 'gpt-4o-mini',
     claude: 'claude-sonnet-4-5',
   },
