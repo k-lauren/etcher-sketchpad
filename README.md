@@ -41,16 +41,11 @@ Context for inference is built by bolting together draggable sticky notes (Q&A p
 - **Config tab** — switch between DeepSeek, OpenAI, and Claude; paste API keys and
   override model names. The provided DeepSeek key is preloaded (this has been deprecated — API key no longer preloaded).
 - **Persistence** — canvas state and config persist in `localStorage`.
+- **Tools** — any model called through Etcher Sketchpad has access to a suite of tools, from search, to document creation.
 
 ## Run
 
-```bash
-cd etcher-sketchpad
-npm install
-npm run dev
-```
-
-Open the URL Vite prints (http://localhost:5173 by default).
+Either go to the link in the repo description to use the cloud-hosted variant, or, to run locally, git clone the repository, enter `npm run dev` in terminal, and open the URL Vite prints (http://localhost:5173 by default).
 
 ## Interactions
 
